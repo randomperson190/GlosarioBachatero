@@ -276,7 +276,12 @@ async function serveRange(cachedResponse, rangeHeader) {
   }
 
   const slice = blob.slice(start, end + 1);
+  // Limpiamos headers que podrían quedar en conflicto con el body recortado
+  // (ej: Content-Encoding/Content-Length del archivo completo original).
   const headers = new Headers(cachedResponse.headers);
+  headers.delete('content-encoding');
+  headers.delete('content-length');
+  headers.delete('content-range');
   headers.set('Content-Range', `bytes ${start}-${end}/${size}`);
   headers.set('Content-Length', String(slice.size));
   headers.set('Accept-Ranges', 'bytes');
@@ -292,7 +297,14 @@ self.addEventListener('fetch', (event) => {
       if (cached) {
         const rangeHeader = event.request.headers.get('range');
         if (rangeHeader) {
-          return serveRange(cached, rangeHeader);
+          try {
+            return await serveRange(cached, rangeHeader);
+          } catch (err) {
+            // Si algo falla armando el 206 parcial, mejor servir el archivo
+            // completo (200) que dejar la reproducción rota del todo.
+            console.warn('No se pudo armar respuesta parcial, sirvo el archivo completo', err);
+            return cached;
+          }
         }
         return cached;
       }
