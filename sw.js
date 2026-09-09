@@ -260,16 +260,58 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// El <video> pide con header "Range" incluso en la carga normal (confirmado:
+// GitHub Pages le responde 206 Partial Content desde el primer pedido). Si
+// desde el cache le devolvemos el archivo entero (200) cuando pidió un
+// rango, Chrome lo rechaza como SRC_NOT_SUPPORTED — hay que recortarlo.
+async function serveRange(cachedResponse, rangeHeader) {
+  const blob = await cachedResponse.clone().blob();
+  const size = blob.size;
+  const match = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
+  if (!match) return cachedResponse;
+
+  let start = match[1] ? parseInt(match[1], 10) : 0;
+  let end = match[2] ? parseInt(match[2], 10) : size - 1;
+  if (Number.isNaN(start) || start < 0) start = 0;
+  if (Number.isNaN(end) || end >= size) end = size - 1;
+
+  if (start > end || size === 0) {
+    return new Response(null, {
+      status: 416,
+      statusText: 'Range Not Satisfiable',
+      headers: { 'Content-Range': `bytes */${size}` }
+    });
+  }
+
+  const slice = blob.slice(start, end + 1);
+  const headers = new Headers(cachedResponse.headers);
+  headers.delete('content-encoding');
+  headers.delete('content-length');
+  headers.delete('content-range');
+  headers.set('Content-Range', `bytes ${start}-${end}/${size}`);
+  headers.set('Content-Length', String(slice.size));
+  headers.set('Accept-Ranges', 'bytes');
+
+  return new Response(slice, { status: 206, statusText: 'Partial Content', headers });
+}
+
 // --- FETCH: cache-first (con fallback a red) ---
-// Nota: si Chrome pide un Range de un archivo cacheado, le devolvemos el
-// archivo COMPLETO (200) en vez de armar un 206 a mano — es válido por spec
-// HTTP (el cliente debe aceptarlo) y evita los problemas de CORS/headers que
-// dio armar la respuesta parcial nosotros mismos.
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cached = await caches.match(event.request);
-      if (cached) return cached;
+      if (cached) {
+        const rangeHeader = event.request.headers.get('range');
+        if (rangeHeader) {
+          try {
+            return await serveRange(cached, rangeHeader);
+          } catch (err) {
+            console.warn('No se pudo armar respuesta parcial, sirvo el archivo completo', err);
+            return cached;
+          }
+        }
+        return cached;
+      }
 
       try {
         const response = await fetch(event.request);
