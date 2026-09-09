@@ -4,7 +4,7 @@
 // página, con reintentos y resume — así una descarga larga que se corta (batería,
 // pantalla apagada, se cierra la pestaña) puede retomarse en vez de perderse toda.
 
-const CACHE_VERSION = 'glosario-bachatero-v5'; // subí este número cuando quieras forzar un recache del shell
+const CACHE_VERSION = 'glosario-bachatero-v6'; // subí este número cuando quieras forzar un recache del shell
 const APP_SHELL = [
   './',
   './index.html',
@@ -140,25 +140,33 @@ async function cacheMissingUrls(cache, urls, label) {
 // Evita que dos disparos de CACHE_MEDIA (ej: page load + botón "reintentar")
 // corran el proceso en paralelo pisándose.
 let mediaCachingPromise = null;
-function cacheAllMedia() {
+function cacheAllMedia(providedUrls) {
   if (mediaCachingPromise) return mediaCachingPromise;
 
   mediaCachingPromise = (async () => {
     const cache = await caches.open(CACHE_VERSION);
 
     try {
-      const videoUrls = await getVideoUrls();
+      // Preferimos SIEMPRE las URLs que manda la página (ya pasadas por
+      // safeUrl/encodeURI, igual que al reproducir) — así garantizamos que
+      // lo cacheado matchee con lo que realmente se va a pedir. getVideoUrls()
+      // queda solo como respaldo si por algún motivo no llegaron en el mensaje.
+      const videoUrls = (providedUrls && providedUrls.videoUrls && providedUrls.videoUrls.length)
+        ? providedUrls.videoUrls
+        : await getVideoUrls();
       await cacheMissingUrls(cache, videoUrls, 'videos');
     } catch (err) {
-      console.error('No se pudo leer figuras-manifest.json', err);
+      console.error('No se pudo armar la lista de videos', err);
       broadcast({ type: 'sw-cache-error', label: 'videos', message: String(err) });
     }
 
     try {
-      const songUrls = await getSongUrls();
+      const songUrls = (providedUrls && providedUrls.songUrls && providedUrls.songUrls.length)
+        ? providedUrls.songUrls
+        : await getSongUrls();
       await cacheMissingUrls(cache, songUrls, 'canciones');
     } catch (err) {
-      console.error('No se pudo leer script.js para sacar las canciones', err);
+      console.error('No se pudo armar la lista de canciones', err);
       broadcast({ type: 'sw-cache-error', label: 'canciones', message: String(err) });
     }
 
@@ -244,7 +252,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('message', (event) => {
   const data = event.data || {};
   if (data.type === 'CACHE_MEDIA') {
-    const p = cacheAllMedia();
+    const p = cacheAllMedia({ videoUrls: data.videoUrls, songUrls: data.songUrls });
     if (event.waitUntil) event.waitUntil(p);
   } else if (data.type === 'CACHE_STATUS') {
     const p = reportStatus(event.source);

@@ -5,9 +5,38 @@
 // página, retoma solo lo que falta (ver sw.js: cacheMissingUrls).
 if ('serviceWorker' in navigator) {
 
-    function startMediaCaching(controller) {
+    // Arma las URLs de TODOS los videos/canciones exactamente como las arma
+    // el reproductor (misma función safeUrl/encodeURI), para que lo que se
+    // cachea en el fondo haga match sí o sí con lo que se pide al reproducir.
+    // Antes el SW armaba estas URLs por su cuenta (sin encodeURI) y terminaban
+    // sin coincidir con las que realmente pide el navegador — por eso lo
+    // descargado en el fondo no servía offline, pero visitar a mano sí.
+    function getAllMediaUrlsForCache() {
+        const videoUrls = new Set();
+        for (const combo of combosData) {
+            for (const dif of Object.values(combo.dificultades || {})) {
+                for (const variante of dif) {
+                    if (variante.file7t) videoUrls.add(safeUrl(variante.file7t));
+                    if (variante.file8t) videoUrls.add(safeUrl(variante.file8t));
+                }
+            }
+        }
+        const songUrls = new Set();
+        for (const c of canciones) {
+            if (c.file) songUrls.add(safeUrl(c.file));
+        }
+        return { videoUrls: Array.from(videoUrls), songUrls: Array.from(songUrls) };
+    }
+
+    async function startMediaCaching(controller) {
         if (!controller) return;
-        controller.postMessage({ type: 'CACHE_MEDIA' });
+        // Espera a que el manifest ya esté cargado (combosData poblado) antes
+        // de armar la lista — si no, iría vacía.
+        if (window.appReadyPromise) {
+            try { await window.appReadyPromise; } catch (e) { /* seguimos igual */ }
+        }
+        const { videoUrls, songUrls } = getAllMediaUrlsForCache();
+        controller.postMessage({ type: 'CACHE_MEDIA', videoUrls, songUrls });
     }
 
     function handleSwMessage(event) {
@@ -1726,7 +1755,7 @@ if (savedSort === 'bpm') {
     document.getElementById('sort-bpm').classList.add('active');
 }
 
-iniciarApp();
+window.appReadyPromise = iniciarApp();
 
 // ===== PULL TO RELOAD (SOLO MOVIL) =====
 (function() {
