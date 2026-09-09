@@ -4,7 +4,7 @@
 // página, con reintentos y resume — así una descarga larga que se corta (batería,
 // pantalla apagada, se cierra la pestaña) puede retomarse en vez de perderse toda.
 
-const CACHE_VERSION = 'glosario-bachatero-v7'; // subí este número cuando quieras forzar un recache del shell
+const CACHE_VERSION = 'glosario-bachatero-v8'; // subí este número cuando quieras forzar un recache del shell
 const APP_SHELL = [
   './',
   './index.html',
@@ -92,24 +92,49 @@ async function cacheOneWithRetry(cache, url, attempts) {
       // real contra el Content-Length declarado — si no coinciden, es un
       // corte a mitad de descarga y lo tratamos como fallo (reintenta).
       const blob = await response.blob();
-      const lenHeader = response.headers.get('content-length');
-      const expectedBytes = lenHeader ? Number(lenHeader) : null;
 
-      if (expectedBytes && blob.size !== expectedBytes) {
-        throw new Error(`Descarga incompleta: ${blob.size} de ${expectedBytes} bytes esperados`);
+      // Estos archivos vienen del servidor como 206 Partial Content INCLUSO
+      // en el primer pedido normal (confirmado antes) — por eso hay que
+      // sacar el tamaño total real del Content-Range cuando está, no solo
+      // del Content-Length (que en un 206 es el tamaño del *pedazo*, salvo
+      // que el pedazo sea el archivo entero).
+      const contentRange = response.headers.get('content-range'); // "bytes 0-N/TOTAL"
+      let expectedTotal = null;
+      if (contentRange) {
+        const m = /\/(\d+)$/.exec(contentRange);
+        if (m) expectedTotal = Number(m[1]);
+      } else {
+        const lenHeader = response.headers.get('content-length');
+        if (lenHeader) expectedTotal = Number(lenHeader);
+      }
+
+      if (expectedTotal && blob.size !== expectedTotal) {
+        throw new Error(`Descarga incompleta o parcial: ${blob.size} de ${expectedTotal} bytes esperados`);
       }
       if (blob.size < MIN_MEDIA_BYTES) {
         throw new Error(`Respuesta sospechosamente chica (${blob.size} bytes) — ¿404 disfrazado de 200?`);
       }
 
-      // Guardamos una Response armada a partir del blob YA VERIFICADO
-      // completo, no la response "en vivo" original.
-      const verifiedResponse = new Response(blob, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: new Headers(response.headers)
+      // CLAVE: guardamos SIEMPRE como 200 limpio, nunca como 206 — aunque el
+      // servidor haya respondido 206 (que es lo normal acá). Guardar un 206
+      // como si fuera "el archivo completo" es lo que rompía todo: después,
+      // el Service Worker lo devolvía tal cual a cualquier pedido SIN header
+      // Range, y un 206 respondiendo a un pedido sin rango es inválido — eso
+      // es el SRC_NOT_SUPPORTED. El camino "reproducir uno por uno" nunca
+      // tuvo este problema porque el fetch handler de abajo ya excluye
+      // cachear respuestas 206 — pero acá, en la descarga en bloque, faltaba
+      // esa misma regla.
+      const headers = new Headers(response.headers);
+      headers.delete('content-range');
+      headers.set('content-length', String(blob.size));
+      headers.set('accept-ranges', 'bytes');
+
+      const normalizedResponse = new Response(blob, {
+        status: 200,
+        statusText: 'OK',
+        headers
       });
-      await cache.put(url, verifiedResponse);
+      await cache.put(url, normalizedResponse);
       return true;
     } catch (err) {
       if (i === attempts - 1) {
