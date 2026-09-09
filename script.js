@@ -632,7 +632,10 @@ function renderGrid() {
         // Necesario para que el Service Worker pueda interceptar y servir
         // bien este pedido (sobre todo los que llevan header Range) — sin
         // esto, el video puede quedarse esperando red aunque ya esté cacheado.
-        vid8t.crossOrigin = 'anonymous';
+        // (crossOrigin='anonymous' se probó acá y se sacó: como la respuesta
+        // la arma el Service Worker a mano para servir Range, el navegador
+        // terminaba rechazándola por CORS — SRC_NOT_SUPPORTED — en vez de
+        // aceptarla. Mismo origen no lo necesita.)
         vid8t.src = safeUrl(item.file8t);
         vid8t.addEventListener('error', () => window.reportMediaError('video8t', vid8t.src, vid8t.error));
 
@@ -643,7 +646,6 @@ function renderGrid() {
         vid7t.preload = 'auto';
         vid7t.loop = true;
         vid7t.dataset.role = 'loop';
-        vid7t.crossOrigin = 'anonymous';
         vid7t.src = safeUrl(item.file7t);
         vid7t.addEventListener('error', () => window.reportMediaError('video7t', vid7t.src, vid7t.error));
 
