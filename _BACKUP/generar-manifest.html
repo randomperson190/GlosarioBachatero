@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de figuras-manifest.json</title>
+<style>
+    :root {
+        --bg: #141013;
+        --bg-card: #1e181c;
+        --border: #34282d;
+        --text: #f1e9ea;
+        --muted: #a99196;
+        --accent: #d9713c;
+        --accent-dim: #7a4326;
+        --ok: #7fae6c;
+        --warn: #e0b23d;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+    }
+    .wrap {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+    }
+    header h1 {
+        font-size: 1.5rem;
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+    }
+    header p {
+        color: var(--muted);
+        margin: 0 0 32px;
+        max-width: 58ch;
+    }
+    .paso {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+    }
+    .paso h2 {
+        font-size: 0.95rem;
+        margin: 0 0 6px;
+        color: var(--accent);
+        font-weight: 600;
+    }
+    .paso > p {
+        color: var(--muted);
+        margin: 0 0 14px;
+        font-size: 0.9rem;
+    }
+    input[type="text"] {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+    }
+    input[type="text"]:focus { outline: 1px solid var(--accent); }
+    .boton-elegir, .boton-principal {
+        display: inline-block;
+        background: var(--accent);
+        color: #1a1214;
+        font-weight: 600;
+        padding: 11px 20px;
+        border-radius: 7px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.92rem;
+    }
+    .boton-elegir:hover, .boton-principal:hover { background: #e78753; }
+    .boton-principal:disabled { background: var(--accent-dim); cursor: not-allowed; color: var(--muted); }
+    #folderName { color: var(--muted); font-size: 0.88rem; margin: 12px 0 0; }
+    .resumen-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 4px 0 16px;
+    }
+    .resumen-num {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+    }
+    .resumen-num strong { display: block; font-size: 1.5rem; color: var(--accent); }
+    .resumen-num span { font-size: 0.78rem; color: var(--muted); }
+    .aviso {
+        border-left: 3px solid var(--warn);
+        background: #2a2118;
+        padding: 10px 14px;
+        border-radius: 0 6px 6px 0;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+    }
+    .aviso.error { border-left-color: #d9534f; background: #2a1717; }
+    .aviso b { color: var(--warn); }
+    .aviso.error b { color: #e07a76; }
+    .aviso ul { margin: 6px 0 0; padding-left: 20px; }
+    .aviso li { margin-bottom: 2px; }
+    details { margin-top: 16px; }
+    summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.82rem; }
+    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; }
+    td.num { color: var(--muted); text-align: right; }
+    .ok-badge { color: var(--ok); }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <h1>Generador de figuras-manifest.json</h1>
+        <p>
+            Esta página escanea (en tu propio navegador, nada se sube a ningún lado) la carpeta con tus videos de
+            figuras y arma el archivo <code>figuras-manifest.json</code> que usa el reproductor. Volvé a correrla
+            cada vez que agregues, saques o renombres videos.
+        </p>
+    </header>
+
+    <section class="paso">
+        <h2>1. Carpeta donde van a vivir los videos en el sitio</h2>
+        <p>
+            Ruta relativa a <code>index.html</code> donde vas a subir estos .mp4 (con la barra final).
+            Si no cambiaste nada, dejá el valor por defecto.
+        </p>
+        <input id="basePath" type="text" value="Figuras/">
+    </section>
+
+    <section class="paso">
+        <h2>2. Elegí la carpeta con los .mp4</h2>
+        <p>Funciona en Chrome, Edge y navegadores basados en Chromium. En Firefox el selector de carpetas puede no aparecer.</p>
+        <label class="boton-elegir">
+            📁 Elegir carpeta...
+            <input id="folderInput" type="file" webkitdirectory multiple hidden>
+        </label>
+        <p id="folderName"></p>
+    </section>
+
+    <section id="resultado" class="paso" hidden>
+        <h2>3. Resultado</h2>
+        <div class="resumen-grid">
+            <div class="resumen-num"><strong id="numCombos">0</strong><span>combinaciones</span></div>
+            <div class="resumen-num"><strong id="numFiguras">0</strong><span>figuras distintas</span></div>
+            <div class="resumen-num"><strong id="numPosiciones">0</strong><span>posiciones distintas</span></div>
+        </div>
+        <div id="avisos"></div>
+        <button id="descargarBtn" class="boton-principal">⬇ Descargar figuras-manifest.json</button>
+        <details>
+            <summary>Ver las <span id="comboCount"></span> combinaciones detectadas</summary>
+            <div id="tablaCombos"></div>
+        </details>
+    </section>
+</div>
+
+<script>
+// ===== Parseo de nombres de archivo =====
+// Patrón esperado: {Posición Inicial}_{Figura}_{Posición Final}_{7t|8t}.mp4
+// "---" (o más guiones) = campo vacío. Un sufijo "-vN" o un 4to campo extra antes
+// del "_7t"/"_8t" es una TOMA alternativa de la misma combinación, no un valor distinto.
+
+function normalizeField(raw) {
+    let s = raw.replace(/-v\d+$/i, '');
+    if (/^-{2,}$/.test(s) || /^-{2,}$/.test(raw)) return '';
+    return s.trim();
+}
+
+function parseFilename(filename) {
+    const m = filename.match(/^(.*)\.mp4$/i);
+    if (!m) return null;
+    const base = m[1];
+    const parts = base.split('_');
+    if (parts.length < 4) return null;
+    const take = parts[parts.length - 1].toLowerCase();
+    if (take !== '7t' && take !== '8t') return null;
+    const rest = parts.slice(0, -1);
+    if (rest.length !== 3 && rest.length !== 4) return null;
+    const [posIniRaw, figuraRaw, posFinRaw] = rest;
+    return {
+        rawKey: rest.join('_'),
+        take,
+        posIni: normalizeField(posIniRaw),
+        figura: normalizeField(figuraRaw),
+        posFin: normalizeField(posFinRaw),
+        filename
+    };
+}
+
+function quitarAcentos(s) {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function construirManifest(archivosMp4, basePath) {
+    const noParseados = [];
+    const porRawKey = {};
+
+    archivosMp4.forEach(filename => {
+        const p = parseFilename(filename);
+        if (!p) { noParseados.push(filename); return; }
+        if (!porRawKey[p.rawKey]) {
+            porRawKey[p.rawKey] = { posIni: p.posIni, figura: p.figura, posFin: p.posFin };
+        }
+        porRawKey[p.rawKey][p.take === '7t' ? 'file7t' : 'file8t'] = basePath + filename;
+    });
+
+    const variantesIncompletas = [];
+    const combosMap = {};
+    Object.keys(porRawKey).forEach(rawKey => {
+        const v = porRawKey[rawKey];
+        if (!v.file7t || !v.file8t) {
+            variantesIncompletas.push(rawKey + (v.file7t ? '_8t.mp4' : '_7t.mp4') + ' (falta el par 7t/8t)');
+            return;
+        }
+        const key = v.posIni + '\u0001' + v.figura + '\u0001' + v.posFin;
+        if (!combosMap[key]) combosMap[key] = { posIni: v.posIni, figura: v.figura, posFin: v.posFin, variantes: [] };
+        combosMap[key].variantes.push({ file7t: v.file7t, file8t: v.file8t });
+    });
+
+    const combos = Object.values(combosMap)
+        .sort((a, b) => (a.figura || '').localeCompare(b.figura || '')
+            || (a.posIni || '').localeCompare(b.posIni || '')
+            || (a.posFin || '').localeCompare(b.posFin || ''))
+        .map((c, i) => ({ id: 'c' + i, ...c }));
+
+    const figuras = [...new Set(combos.map(c => c.figura).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const posiciones = [...new Set(combos.flatMap(c => [c.posIni, c.posFin]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+    // Detección de posibles duplicados por tipeo/acentos/mayúsculas
+    function detectarPosiblesDuplicados(valores) {
+        const grupos = {};
+        valores.forEach(v => {
+            const k = quitarAcentos(v);
+            (grupos[k] = grupos[k] || []).push(v);
+        });
+        return Object.values(grupos).filter(g => new Set(g).size > 1);
+    }
+    const dupFiguras = detectarPosiblesDuplicados(figuras);
+    const dupPosiciones = detectarPosiblesDuplicados(posiciones);
+
+    return {
+        manifest: {
+            generatedAt: new Date().toISOString(),
+            basePath,
+            figuras,
+            posiciones,
+            combos
+        },
+        avisos: { noParseados, variantesIncompletas, dupFiguras, dupPosiciones }
+    };
+}
+
+// ===== UI =====
+const folderInput = document.getElementById('folderInput');
+const folderName = document.getElementById('folderName');
+const resultado = document.getElementById('resultado');
+const avisosEl = document.getElementById('avisos');
+const descargarBtn = document.getElementById('descargarBtn');
+let manifestActual = null;
+
+folderInput.addEventListener('change', () => {
+    const files = Array.from(folderInput.files || []);
+    if (files.length === 0) return;
+
+    const carpetaRaiz = (files[0].webkitRelativePath || files[0].name).split('/')[0];
+    folderName.innerText = `📂 ${carpetaRaiz} — ${files.length} archivo(s) encontrados`;
+
+    const mp4s = files.filter(f => f.name.toLowerCase().endsWith('.mp4')).map(f => f.name);
+    const basePath = document.getElementById('basePath').value.trim() || 'Figuras/';
+    const { manifest, avisos } = construirManifest(mp4s, basePath.endsWith('/') ? basePath : basePath + '/');
+    manifestActual = manifest;
+
+    document.getElementById('numCombos').innerText = manifest.combos.length;
+    document.getElementById('numFiguras').innerText = manifest.figuras.length;
+    document.getElementById('numPosiciones').innerText = manifest.posiciones.length;
+    document.getElementById('comboCount').innerText = manifest.combos.length;
+
+    let avisosHtml = '';
+    if (avisos.noParseados.length > 0) {
+        avisosHtml += `<div class="aviso error"><b>${avisos.noParseados.length} archivo(s) no se pudieron interpretar</b> (no siguen el patrón Posición_Figura_Posición_7t|8t) y quedaron afuera:
+            <ul>${avisos.noParseados.slice(0, 15).map(f => `<li>${f}</li>`).join('')}</ul>
+            ${avisos.noParseados.length > 15 ? `<div>...y ${avisos.noParseados.length - 15} más.</div>` : ''}
+        </div>`;
+    }
+    if (avisos.variantesIncompletas.length > 0) {
+        avisosHtml += `<div class="aviso error"><b>${avisos.variantesIncompletas.length} toma(s) sin su par 7t/8t</b>, no se incluyeron:
+            <ul>${avisos.variantesIncompletas.slice(0, 15).map(f => `<li>${f}</li>`).join('')}</ul>
+        </div>`;
+    }
+    if (avisos.dupFiguras.length > 0) {
+        avisosHtml += `<div class="aviso"><b>Posibles figuras duplicadas por tipeo/acentos/mayúsculas</b> (revisá si son la misma):
+            <ul>${avisos.dupFiguras.map(g => `<li>${g.join('  vs.  ')}</li>`).join('')}</ul>
+        </div>`;
+    }
+    if (avisos.dupPosiciones.length > 0) {
+        avisosHtml += `<div class="aviso"><b>Posibles posiciones duplicadas por tipeo/acentos/mayúsculas</b> (revisá si son la misma):
+            <ul>${avisos.dupPosiciones.map(g => `<li>${g.join('  vs.  ')}</li>`).join('')}</ul>
+        </div>`;
+    }
+    if (avisosHtml === '') {
+        avisosHtml = `<div class="aviso" style="border-left-color: var(--ok);"><span class="ok-badge">✓ Todo se interpretó sin problemas.</span></div>`;
+    }
+    avisosEl.innerHTML = avisosHtml;
+
+    document.getElementById('tablaCombos').innerHTML = `
+        <table>
+            <thead><tr><th>Posición Inicial</th><th>Figura</th><th>Posición Final</th><th class="num">Tomas</th></tr></thead>
+            <tbody>
+                ${manifest.combos.map(c => `
+                    <tr>
+                        <td>${c.posIni || '<span style="color:var(--muted)">(vacío)</span>'}</td>
+                        <td>${c.figura || '<span style="color:var(--muted)">(vacío)</span>'}</td>
+                        <td>${c.posFin || '<span style="color:var(--muted)">(vacío)</span>'}</td>
+                        <td class="num">${c.variantes.length}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+
+    resultado.hidden = false;
+    descargarBtn.disabled = manifest.combos.length === 0;
+});
+
+descargarBtn.addEventListener('click', () => {
+    if (!manifestActual) return;
+    const blob = new Blob([JSON.stringify(manifestActual, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'figuras-manifest.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

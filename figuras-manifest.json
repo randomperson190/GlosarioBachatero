@@ -1,0 +1,1577 @@
+{
+  "generatedAt": "2026-09-06T04:28:29.544Z",
+  "basePath": "Figuras/",
+  "figuras": [
+    "Acerco Alejo",
+    "Apertura + Traslado + ContraGiro Hombre",
+    "Bandeja + Helicóptero",
+    "Básico",
+    "Básico + Cadera",
+    "Básico + Caminata hacia el Hombre",
+    "Básico + HipRoll Horizontal Mujer",
+    "Básico + Ondita Frontal",
+    "Cambio de Frente",
+    "Caminata Conjunta",
+    "Caminata Conjunta + Ondita",
+    "Caminata hacia el Hombre",
+    "Catapulta + Corona Doble Mujer",
+    "Catapulta + Entrada Hammerlock Mujer",
+    "Catapulta + HeadRoll Mujer",
+    "Contorno",
+    "Corona Simple Mujer + Traslado + Entrada Hammerlock Hombre",
+    "Doble Péndulo + Salida Sombra Mujer Enredada",
+    "Doble Péndulo Cruzado + Entrada Titanic Clásico",
+    "Doble Péndulo Paralelo",
+    "Doble Péndulo Paralelo + Giro Mujer",
+    "Doble Péndulo Paralelo + HeadRoll Ambos",
+    "Entrada a Pretzel Clásico",
+    "Entrada a Sombra Mujer Clásico + Ondita",
+    "Entrada Hammerlock Hombre",
+    "Entrada Hammerlock Mujer + HipRoll Horizontal Mujer",
+    "Entrada Pretzel Clásico + Paseo Pretzel Clásico",
+    "Entrada Sombra Mujer Clásico + Corona Simple Mujer",
+    "Entrada Titanic Clásico + Salida Titanic Clásico",
+    "Gancho + HeadRoll Mujer + Entrada a Sombra Mujer Clásico",
+    "Gancho + Traslado",
+    "Giro Hombre + Traslado",
+    "Giro Mujer + Traslado",
+    "Helicóptero + Salida Titanic Clásico + Volcada",
+    "HipRoll Horizontal Mujer",
+    "HipRoll Vertical Mujer + Bandeja",
+    "HipRoll Vertical Mujer + Salida Sombra Mujer Enredada",
+    "Invado + HipRoll Horizontal Mujer",
+    "Invado + HipRoll Vertical Mujer",
+    "Invado + Salida Sombra Mujer Clásico",
+    "Invado + Salida Sombra Mujer Enredada",
+    "Invado + Salida Titanic Clásico",
+    "Madrid",
+    "Madrid + Entrada Titanic Cruzado",
+    "Ondita",
+    "Ondita + Volcada",
+    "Ondita Diagonal + Ondita Frontal",
+    "Ondita Frontal",
+    "Ondita Frontal + Traslado",
+    "Paseo Pretzel Clásico + Salida Pretzel Clásico",
+    "Retroceso + Ondita",
+    "Retroceso + Salida Sombra Mujer Clásico",
+    "Revoleada",
+    "Rotor",
+    "Salida Hammerlock Hombre + Entrada Pretzel al Hombro",
+    "Salida Hammerlock Hombre + Giro Mujer Amagado",
+    "Salida Hammerlock Mujer",
+    "Salida Hammerlock Mujer + Entrada Sombra Mujer Clásico + Ondita",
+    "Salida Hammerlock Mujer + Ondita Frontal",
+    "Salida Sombra Mujer Clásico",
+    "Salida Sombra Mujer Enredada + Volcada Lateral",
+    "Salida Titanic Corrido",
+    "Salida Titanic Corrido + Giro Doble",
+    "Salida Titanic Corrido + Giro Mujer",
+    "Salida Titanic Corrido + Giro Mujer + Corona Simple Mujer",
+    "Salida Titanic Corrido + Ondita Frontal",
+    "Salida Titanic Cruzado",
+    "Sentada",
+    "Takata + Ondita",
+    "Torso Cadera Cadera Torso",
+    "Traslado + Catapulta",
+    "Traslado + Entrada Catapulta",
+    "Traslado + Entrada Hammerlock Hombre + Corona Simple Mujer",
+    "Traslado + Entrada Pretzel Clásico + Salida Pretzel Clásico",
+    "Traslado + Giro Hombre",
+    "Traslado + Giro Mujer",
+    "Volcada + Salida Sombra Mujer Clásico",
+    "Volcada Diagonal + Giro Mujer",
+    "Volcada Frontal"
+  ],
+  "posiciones": [
+    "Casamiento",
+    "Catapulta",
+    "Hammerlock Hombre",
+    "Hammerlock Mujer",
+    "Posición Abierta Dura",
+    "Posición Abierta Mujer",
+    "Posición Abierta Relajada",
+    "Posición Abierta Relajada Cruzadas 1",
+    "Posición Abierta Relajada Cruzadas 2",
+    "Posición Abierta Relajada Cruzadas al Aire 2",
+    "Posición Abierta Relajada Paralelas 1",
+    "Posición Abierta Relajada Paralelas 2",
+    "Posición Abierta Relajada Paralelas al Aire 1",
+    "Posición Abierta Relajada Paralelas al Aire 2",
+    "Posición Cerrada en Cintura 2",
+    "Posición Cerrada en Espalda 1",
+    "Posición Cerrada en Espalda 2",
+    "Pretzel al Hombro",
+    "Pretzel Clásico",
+    "Pretzel sin Agarre",
+    "Sombra Mujer Clásico",
+    "Sombra Mujer Enredada",
+    "Titanic Clásico",
+    "Titanic Corrido",
+    "Titanic Cruzado"
+  ],
+  "dificultades": [
+    "D1",
+    "D2",
+    "D3",
+    "D4"
+  ],
+  "combos": [
+    {
+      "id": "c0",
+      "posIni": "",
+      "figura": "Apertura + Traslado + ContraGiro Hombre",
+      "posFin": "Posición Abierta Relajada Cruzadas 1",
+      "orden": 1,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/001_---_Apertura + Traslado + ContraGiro Hombre_Posición Abierta Relajada Cruzadas 1_D2_RIL_7t.mp4",
+            "file8t": "Figuras/001_---_Apertura + Traslado + ContraGiro Hombre_Posición Abierta Relajada Cruzadas 1_D2_RIL_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c1",
+      "posIni": "",
+      "figura": "Ondita Frontal + Traslado",
+      "posFin": "",
+      "orden": 2,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/002_---_Ondita Frontal + Traslado_---_D3_UAS_7t.mp4",
+            "file8t": "Figuras/002_---_Ondita Frontal + Traslado_---_D3_UAS_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c2",
+      "posIni": "",
+      "figura": "Traslado + Catapulta",
+      "posFin": "Posición Abierta Relajada Paralelas 1",
+      "orden": 3,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/003_---_Traslado + Catapulta_Posición Abierta Relajada Paralelas 1_D3_AEC_7t.mp4",
+            "file8t": "Figuras/003_---_Traslado + Catapulta_Posición Abierta Relajada Paralelas 1_D3_AEC_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c3",
+      "posIni": "Casamiento",
+      "figura": "Caminata Conjunta + Ondita",
+      "posFin": "Casamiento",
+      "orden": 4,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/004_Casamiento_Caminata Conjunta + Ondita_Casamiento_D2_XRV_7t.mp4",
+            "file8t": "Figuras/004_Casamiento_Caminata Conjunta + Ondita_Casamiento_D2_XRV_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c4",
+      "posIni": "Casamiento",
+      "figura": "Caminata Conjunta",
+      "posFin": "Casamiento",
+      "orden": 5,
+      "dificultades": {
+        "D1": [
+          {
+            "file7t": "Figuras/005_Casamiento_Caminata Conjunta_Casamiento_D1_LGC_7t.mp4",
+            "file8t": "Figuras/005_Casamiento_Caminata Conjunta_Casamiento_D1_LGC_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c5",
+      "posIni": "Casamiento",
+      "figura": "Volcada Frontal",
+      "posFin": "Casamiento",
+      "orden": 6,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/006_Casamiento_Volcada Frontal_Casamiento_D3_FCN_7t.mp4",
+            "file8t": "Figuras/006_Casamiento_Volcada Frontal_Casamiento_D3_FCN_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c6",
+      "posIni": "Catapulta",
+      "figura": "Catapulta + Corona Doble Mujer",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 7,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/007_Catapulta_Catapulta + Corona Doble Mujer_Posición Cerrada en Espalda 2_D2_NEY_7t.mp4",
+            "file8t": "Figuras/007_Catapulta_Catapulta + Corona Doble Mujer_Posición Cerrada en Espalda 2_D2_NEY_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c7",
+      "posIni": "Catapulta",
+      "figura": "Catapulta + Entrada Hammerlock Mujer",
+      "posFin": "Hammerlock Mujer",
+      "orden": 8,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/008_Catapulta_Catapulta + Entrada Hammerlock Mujer_Hammerlock Mujer_D2_YWI_7t.mp4",
+            "file8t": "Figuras/008_Catapulta_Catapulta + Entrada Hammerlock Mujer_Hammerlock Mujer_D2_YWI_8t.mp4"
+          }
+        ],
+        "D3": [
+          {
+            "file7t": "Figuras/009_Catapulta_Catapulta + Entrada Hammerlock Mujer_Hammerlock Mujer_D3_GKI_7t.mp4",
+            "file8t": "Figuras/009_Catapulta_Catapulta + Entrada Hammerlock Mujer_Hammerlock Mujer_D3_GKI_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c8",
+      "posIni": "Catapulta",
+      "figura": "Catapulta + HeadRoll Mujer",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 10,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/010_Catapulta_Catapulta + HeadRoll Mujer_Posición Cerrada en Espalda 1_D3_VUR_7t.mp4",
+            "file8t": "Figuras/010_Catapulta_Catapulta + HeadRoll Mujer_Posición Cerrada en Espalda 1_D3_VUR_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c9",
+      "posIni": "Hammerlock Hombre",
+      "figura": "Salida Hammerlock Hombre + Entrada Pretzel al Hombro",
+      "posFin": "Pretzel al Hombro",
+      "orden": 11,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/011_Hammerlock Hombre_Salida Hammerlock Hombre + Entrada Pretzel al Hombro_Pretzel al Hombro_D3_PFG_7t.mp4",
+            "file8t": "Figuras/011_Hammerlock Hombre_Salida Hammerlock Hombre + Entrada Pretzel al Hombro_Pretzel al Hombro_D3_PFG_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c10",
+      "posIni": "Hammerlock Hombre",
+      "figura": "Salida Hammerlock Hombre + Giro Mujer Amagado",
+      "posFin": "Posición Abierta Relajada Cruzadas al Aire 2",
+      "orden": 12,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/012_Hammerlock Hombre_Salida Hammerlock Hombre + Giro Mujer Amagado_Posición Abierta Relajada Cruzadas al Aire 2_D3_TSG_7t.mp4",
+            "file8t": "Figuras/012_Hammerlock Hombre_Salida Hammerlock Hombre + Giro Mujer Amagado_Posición Abierta Relajada Cruzadas al Aire 2_D3_TSG_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c11",
+      "posIni": "Hammerlock Mujer",
+      "figura": "Básico + HipRoll Horizontal Mujer",
+      "posFin": "Hammerlock Mujer",
+      "orden": 13,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/013_Hammerlock Mujer_Básico + HipRoll Horizontal Mujer_Hammerlock Mujer_D2_OZC_7t.mp4",
+            "file8t": "Figuras/013_Hammerlock Mujer_Básico + HipRoll Horizontal Mujer_Hammerlock Mujer_D2_OZC_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c12",
+      "posIni": "Hammerlock Mujer",
+      "figura": "Salida Hammerlock Mujer + Entrada Sombra Mujer Clásico + Ondita",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 14,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/014_Hammerlock Mujer_Salida Hammerlock Mujer + Entrada Sombra Mujer Clásico + Ondita_Sombra Mujer Clásico_D3_VLE_7t.mp4",
+            "file8t": "Figuras/014_Hammerlock Mujer_Salida Hammerlock Mujer + Entrada Sombra Mujer Clásico + Ondita_Sombra Mujer Clásico_D3_VLE_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c13",
+      "posIni": "Hammerlock Mujer",
+      "figura": "Salida Hammerlock Mujer + Ondita Frontal",
+      "posFin": "Posición Abierta Dura",
+      "orden": 15,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/015_Hammerlock Mujer_Salida Hammerlock Mujer + Ondita Frontal_Posición Abierta Dura_D4_LQK_7t.mp4",
+            "file8t": "Figuras/015_Hammerlock Mujer_Salida Hammerlock Mujer + Ondita Frontal_Posición Abierta Dura_D4_LQK_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c14",
+      "posIni": "Hammerlock Mujer",
+      "figura": "Salida Hammerlock Mujer",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 16,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/016_Hammerlock Mujer_Salida Hammerlock Mujer_Posición Abierta Relajada Paralelas 2_D2_EVP_7t.mp4",
+            "file8t": "Figuras/016_Hammerlock Mujer_Salida Hammerlock Mujer_Posición Abierta Relajada Paralelas 2_D2_EVP_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c15",
+      "posIni": "Posición Abierta Dura",
+      "figura": "Caminata hacia el Hombre",
+      "posFin": "Posición Abierta Dura",
+      "orden": 17,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/017_Posición Abierta Dura_Caminata hacia el Hombre_Posición Abierta Dura_D3_TYW_7t.mp4",
+            "file8t": "Figuras/017_Posición Abierta Dura_Caminata hacia el Hombre_Posición Abierta Dura_D3_TYW_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c16",
+      "posIni": "Posición Abierta Dura",
+      "figura": "Doble Péndulo Cruzado + Entrada Titanic Clásico",
+      "posFin": "Titanic Clásico",
+      "orden": 18,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/018_Posición Abierta Dura_Doble Péndulo Cruzado + Entrada Titanic Clásico_Titanic Clásico_D4_ZRX_7t.mp4",
+            "file8t": "Figuras/018_Posición Abierta Dura_Doble Péndulo Cruzado + Entrada Titanic Clásico_Titanic Clásico_D4_ZRX_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c17",
+      "posIni": "Posición Abierta Dura",
+      "figura": "Madrid",
+      "posFin": "Posición Abierta Dura",
+      "orden": 19,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/019_Posición Abierta Dura_Madrid_Posición Abierta Dura_D3_URG_7t.mp4",
+            "file8t": "Figuras/019_Posición Abierta Dura_Madrid_Posición Abierta Dura_D3_URG_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c18",
+      "posIni": "Posición Abierta Dura",
+      "figura": "Traslado + Entrada Catapulta",
+      "posFin": "Catapulta",
+      "orden": 20,
+      "dificultades": {
+        "D1": [
+          {
+            "file7t": "Figuras/020_Posición Abierta Dura_Traslado + Entrada Catapulta_Catapulta_D1_JYV_7t.mp4",
+            "file8t": "Figuras/020_Posición Abierta Dura_Traslado + Entrada Catapulta_Catapulta_D1_JYV_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c19",
+      "posIni": "Posición Abierta Mujer",
+      "figura": "Corona Simple Mujer + Traslado + Entrada Hammerlock Hombre",
+      "posFin": "Hammerlock Hombre",
+      "orden": 21,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/021_Posición Abierta Mujer_Corona Simple Mujer + Traslado + Entrada Hammerlock Hombre_Hammerlock Hombre_D3_YIA_7t.mp4",
+            "file8t": "Figuras/021_Posición Abierta Mujer_Corona Simple Mujer + Traslado + Entrada Hammerlock Hombre_Hammerlock Hombre_D3_YIA_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c20",
+      "posIni": "Posición Abierta Relajada Cruzadas 1",
+      "figura": "Entrada Titanic Clásico + Salida Titanic Clásico",
+      "posFin": "",
+      "orden": 22,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/022_Posición Abierta Relajada Cruzadas 1_Entrada Titanic Clásico + Salida Titanic Clásico_---_D4_AKO_7t.mp4",
+            "file8t": "Figuras/022_Posición Abierta Relajada Cruzadas 1_Entrada Titanic Clásico + Salida Titanic Clásico_---_D4_AKO_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c21",
+      "posIni": "Posición Abierta Relajada Cruzadas 1",
+      "figura": "Traslado + Entrada Hammerlock Hombre + Corona Simple Mujer",
+      "posFin": "Hammerlock Hombre",
+      "orden": 23,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/023_Posición Abierta Relajada Cruzadas 1_Traslado + Entrada Hammerlock Hombre + Corona Simple Mujer_Hammerlock Hombre_D3_QEY_7t.mp4",
+            "file8t": "Figuras/023_Posición Abierta Relajada Cruzadas 1_Traslado + Entrada Hammerlock Hombre + Corona Simple Mujer_Hammerlock Hombre_D3_QEY_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c22",
+      "posIni": "Posición Abierta Relajada Paralelas 1",
+      "figura": "Giro Mujer + Traslado",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 24,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/024_Posición Abierta Relajada Paralelas 1_Giro Mujer + Traslado_Posición Abierta Relajada Paralelas 2_D3_KAU_7t.mp4",
+            "file8t": "Figuras/024_Posición Abierta Relajada Paralelas 1_Giro Mujer + Traslado_Posición Abierta Relajada Paralelas 2_D3_KAU_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c23",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Doble Péndulo Paralelo + HeadRoll Ambos",
+      "posFin": "",
+      "orden": 25,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/025_Posición Abierta Relajada Paralelas 2_Doble Péndulo Paralelo + HeadRoll Ambos_---_D3_WFR_7t.mp4",
+            "file8t": "Figuras/025_Posición Abierta Relajada Paralelas 2_Doble Péndulo Paralelo + HeadRoll Ambos_---_D3_WFR_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c24",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Doble Péndulo Paralelo",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 26,
+      "dificultades": {
+        "D1": [
+          {
+            "file7t": "Figuras/026_Posición Abierta Relajada Paralelas 2_Doble Péndulo Paralelo_Posición Cerrada en Espalda 1_D1_FHA_7t.mp4",
+            "file8t": "Figuras/026_Posición Abierta Relajada Paralelas 2_Doble Péndulo Paralelo_Posición Cerrada en Espalda 1_D1_FHA_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c25",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Entrada Hammerlock Hombre",
+      "posFin": "Hammerlock Hombre",
+      "orden": 27,
+      "dificultades": {
+        "D1": [
+          {
+            "file7t": "Figuras/027_Posición Abierta Relajada Paralelas 2_Entrada Hammerlock Hombre_Hammerlock Hombre_D1_KTQ_7t.mp4",
+            "file8t": "Figuras/027_Posición Abierta Relajada Paralelas 2_Entrada Hammerlock Hombre_Hammerlock Hombre_D1_KTQ_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c26",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Entrada Hammerlock Mujer + HipRoll Horizontal Mujer",
+      "posFin": "Hammerlock Mujer",
+      "orden": 28,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/028_Posición Abierta Relajada Paralelas 2_Entrada Hammerlock Mujer + HipRoll Horizontal Mujer_Hammerlock Mujer_D2_XEU_7t.mp4",
+            "file8t": "Figuras/028_Posición Abierta Relajada Paralelas 2_Entrada Hammerlock Mujer + HipRoll Horizontal Mujer_Hammerlock Mujer_D2_XEU_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c27",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Entrada Sombra Mujer Clásico + Corona Simple Mujer",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 29,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/029_Posición Abierta Relajada Paralelas 2_Entrada Sombra Mujer Clásico + Corona Simple Mujer_Sombra Mujer Clásico_D3_ASK_7t.mp4",
+            "file8t": "Figuras/029_Posición Abierta Relajada Paralelas 2_Entrada Sombra Mujer Clásico + Corona Simple Mujer_Sombra Mujer Clásico_D3_ASK_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c28",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Gancho + HeadRoll Mujer + Entrada a Sombra Mujer Clásico",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 30,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/030_Posición Abierta Relajada Paralelas 2_Gancho + HeadRoll Mujer + Entrada a Sombra Mujer Clásico_Sombra Mujer Clásico_D4_JZL_7t.mp4",
+            "file8t": "Figuras/030_Posición Abierta Relajada Paralelas 2_Gancho + HeadRoll Mujer + Entrada a Sombra Mujer Clásico_Sombra Mujer Clásico_D4_JZL_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c29",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Gancho + Traslado",
+      "posFin": "Posición Abierta Relajada Paralelas 1",
+      "orden": 31,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/031_Posición Abierta Relajada Paralelas 2_Gancho + Traslado_Posición Abierta Relajada Paralelas 1_D2_FVM_7t.mp4",
+            "file8t": "Figuras/031_Posición Abierta Relajada Paralelas 2_Gancho + Traslado_Posición Abierta Relajada Paralelas 1_D2_FVM_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c30",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Rotor",
+      "posFin": "Posición Abierta Relajada Cruzadas 2",
+      "orden": 32,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/032_Posición Abierta Relajada Paralelas 2_Rotor_Posición Abierta Relajada Cruzadas 2_D2_DKF_7t.mp4",
+            "file8t": "Figuras/032_Posición Abierta Relajada Paralelas 2_Rotor_Posición Abierta Relajada Cruzadas 2_D2_DKF_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c31",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Traslado + Entrada Pretzel Clásico + Salida Pretzel Clásico",
+      "posFin": "",
+      "orden": 33,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/033_Posición Abierta Relajada Paralelas 2_Traslado + Entrada Pretzel Clásico + Salida Pretzel Clásico_---_D4_VOZ_7t.mp4",
+            "file8t": "Figuras/033_Posición Abierta Relajada Paralelas 2_Traslado + Entrada Pretzel Clásico + Salida Pretzel Clásico_---_D4_VOZ_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c32",
+      "posIni": "Posición Abierta Relajada Paralelas 2",
+      "figura": "Traslado + Giro Mujer",
+      "posFin": "Posición Abierta Relajada Cruzadas al Aire 2",
+      "orden": 34,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/034_Posición Abierta Relajada Paralelas 2_Traslado + Giro Mujer_Posición Abierta Relajada Cruzadas al Aire 2_D2_NGX_7t.mp4",
+            "file8t": "Figuras/034_Posición Abierta Relajada Paralelas 2_Traslado + Giro Mujer_Posición Abierta Relajada Cruzadas al Aire 2_D2_NGX_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c33",
+      "posIni": "Posición Abierta Relajada Paralelas al Aire 1",
+      "figura": "Giro Hombre + Traslado",
+      "posFin": "Posición Abierta Relajada Paralelas al Aire 2",
+      "orden": 35,
+      "dificultades": {
+        "D1": [
+          {
+            "file7t": "Figuras/035_Posición Abierta Relajada Paralelas al Aire 1_Giro Hombre + Traslado_Posición Abierta Relajada Paralelas al Aire 2_D1_USL_7t.mp4",
+            "file8t": "Figuras/035_Posición Abierta Relajada Paralelas al Aire 1_Giro Hombre + Traslado_Posición Abierta Relajada Paralelas al Aire 2_D1_USL_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c34",
+      "posIni": "Posición Abierta Relajada Paralelas al Aire 2",
+      "figura": "Doble Péndulo Paralelo + Giro Mujer",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 36,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/036_Posición Abierta Relajada Paralelas al Aire 2_Doble Péndulo Paralelo + Giro Mujer_Posición Cerrada en Espalda 1_D2_WCT_7t.mp4",
+            "file8t": "Figuras/036_Posición Abierta Relajada Paralelas al Aire 2_Doble Péndulo Paralelo + Giro Mujer_Posición Cerrada en Espalda 1_D2_WCT_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c35",
+      "posIni": "Posición Abierta Relajada",
+      "figura": "Entrada Pretzel Clásico + Paseo Pretzel Clásico",
+      "posFin": "Pretzel Clásico",
+      "orden": 37,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/037_Posición Abierta Relajada_Entrada Pretzel Clásico + Paseo Pretzel Clásico_Pretzel Clásico_D3_KDL_7t.mp4",
+            "file8t": "Figuras/037_Posición Abierta Relajada_Entrada Pretzel Clásico + Paseo Pretzel Clásico_Pretzel Clásico_D3_KDL_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c36",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Básico + Caminata hacia el Hombre",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 38,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/038_Posición Cerrada en Espalda 1_Básico + Caminata hacia el Hombre_Posición Abierta Relajada Paralelas 2_D2_VBK_7t.mp4",
+            "file8t": "Figuras/038_Posición Cerrada en Espalda 1_Básico + Caminata hacia el Hombre_Posición Abierta Relajada Paralelas 2_D2_VBK_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c37",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Básico",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 39,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/039_Posición Cerrada en Espalda 1_Básico_Posición Cerrada en Espalda 1_D2_KTO_7t.mp4",
+            "file8t": "Figuras/039_Posición Cerrada en Espalda 1_Básico_Posición Cerrada en Espalda 1_D2_KTO_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c38",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Cambio de Frente",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 40,
+      "dificultades": {
+        "D1": [
+          {
+            "file7t": "Figuras/040_Posición Cerrada en Espalda 1_Cambio de Frente_Posición Cerrada en Espalda 1_D1_UQX_7t.mp4",
+            "file8t": "Figuras/040_Posición Cerrada en Espalda 1_Cambio de Frente_Posición Cerrada en Espalda 1_D1_UQX_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c39",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Cambio de Frente",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 41,
+      "dificultades": {
+        "D1": [
+          {
+            "file7t": "Figuras/041_Posición Cerrada en Espalda 1_Cambio de Frente_Posición Cerrada en Espalda 2_D1_BPK_7t.mp4",
+            "file8t": "Figuras/041_Posición Cerrada en Espalda 1_Cambio de Frente_Posición Cerrada en Espalda 2_D1_BPK_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c40",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Entrada a Pretzel Clásico",
+      "posFin": "Pretzel Clásico",
+      "orden": 42,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/042_Posición Cerrada en Espalda 1_Entrada a Pretzel Clásico_Pretzel Clásico_D2_KAL_7t.mp4",
+            "file8t": "Figuras/042_Posición Cerrada en Espalda 1_Entrada a Pretzel Clásico_Pretzel Clásico_D2_KAL_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c41",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Entrada a Sombra Mujer Clásico + Ondita",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 43,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/043_Posición Cerrada en Espalda 1_Entrada a Sombra Mujer Clásico + Ondita_Sombra Mujer Clásico_D2_QTV_7t.mp4",
+            "file8t": "Figuras/043_Posición Cerrada en Espalda 1_Entrada a Sombra Mujer Clásico + Ondita_Sombra Mujer Clásico_D2_QTV_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c42",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "HipRoll Horizontal Mujer",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 44,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/044_Posición Cerrada en Espalda 1_HipRoll Horizontal Mujer_Posición Cerrada en Espalda 1_D3_GER_7t.mp4",
+            "file8t": "Figuras/044_Posición Cerrada en Espalda 1_HipRoll Horizontal Mujer_Posición Cerrada en Espalda 1_D3_GER_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c43",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Madrid + Entrada Titanic Cruzado",
+      "posFin": "Titanic Cruzado",
+      "orden": 45,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/045_Posición Cerrada en Espalda 1_Madrid + Entrada Titanic Cruzado_Titanic Cruzado_D4_VEO_7t.mp4",
+            "file8t": "Figuras/045_Posición Cerrada en Espalda 1_Madrid + Entrada Titanic Cruzado_Titanic Cruzado_D4_VEO_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c44",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Madrid",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 46,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/046_Posición Cerrada en Espalda 1_Madrid_Posición Cerrada en Espalda 1_D3_ZQG_7t.mp4",
+            "file8t": "Figuras/046_Posición Cerrada en Espalda 1_Madrid_Posición Cerrada en Espalda 1_D3_ZQG_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c45",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Ondita Frontal",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 47,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/047_Posición Cerrada en Espalda 1_Ondita Frontal_Posición Cerrada en Espalda 1_D3_IVD_7t.mp4",
+            "file8t": "Figuras/047_Posición Cerrada en Espalda 1_Ondita Frontal_Posición Cerrada en Espalda 1_D3_IVD_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c46",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Revoleada",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 48,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/048_Posición Cerrada en Espalda 1_Revoleada_Posición Cerrada en Espalda 2_D4_WKD_7t.mp4",
+            "file8t": "Figuras/048_Posición Cerrada en Espalda 1_Revoleada_Posición Cerrada en Espalda 2_D4_WKD_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c47",
+      "posIni": "Posición Cerrada en Espalda 1",
+      "figura": "Volcada Diagonal + Giro Mujer",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 49,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/049_Posición Cerrada en Espalda 1_Volcada Diagonal + Giro Mujer_Posición Cerrada en Espalda 1_D3_PXN_7t.mp4",
+            "file8t": "Figuras/049_Posición Cerrada en Espalda 1_Volcada Diagonal + Giro Mujer_Posición Cerrada en Espalda 1_D3_PXN_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c48",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Básico + HipRoll Horizontal Mujer",
+      "posFin": "Posición Cerrada en Cintura 2",
+      "orden": 50,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/050_Posición Cerrada en Espalda 2_Básico + HipRoll Horizontal Mujer_Posición Cerrada en Cintura 2_D2_FGO_7t.mp4",
+            "file8t": "Figuras/050_Posición Cerrada en Espalda 2_Básico + HipRoll Horizontal Mujer_Posición Cerrada en Cintura 2_D2_FGO_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c49",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Básico + Ondita Frontal",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 51,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/051_Posición Cerrada en Espalda 2_Básico + Ondita Frontal_Posición Abierta Relajada Paralelas 2_D3_FVY_7t.mp4",
+            "file8t": "Figuras/051_Posición Cerrada en Espalda 2_Básico + Ondita Frontal_Posición Abierta Relajada Paralelas 2_D3_FVY_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c50",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Cambio de Frente",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 52,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/052_Posición Cerrada en Espalda 2_Cambio de Frente_Posición Cerrada en Espalda 1_D2_ZFG_7t.mp4",
+            "file8t": "Figuras/052_Posición Cerrada en Espalda 2_Cambio de Frente_Posición Cerrada en Espalda 1_D2_ZFG_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c51",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Caminata hacia el Hombre",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 53,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/053_Posición Cerrada en Espalda 2_Caminata hacia el Hombre_Posición Cerrada en Espalda 2_D3_WYU_7t.mp4",
+            "file8t": "Figuras/053_Posición Cerrada en Espalda 2_Caminata hacia el Hombre_Posición Cerrada en Espalda 2_D3_WYU_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c52",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Ondita Diagonal + Ondita Frontal",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 54,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/054_Posición Cerrada en Espalda 2_Ondita Diagonal + Ondita Frontal_Posición Cerrada en Espalda 2_D3_NMK_7t.mp4",
+            "file8t": "Figuras/054_Posición Cerrada en Espalda 2_Ondita Diagonal + Ondita Frontal_Posición Cerrada en Espalda 2_D3_NMK_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c53",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Revoleada",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 55,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/055_Posición Cerrada en Espalda 2_Revoleada_Posición Cerrada en Espalda 1_D4_OSV_7t.mp4",
+            "file8t": "Figuras/055_Posición Cerrada en Espalda 2_Revoleada_Posición Cerrada en Espalda 1_D4_OSV_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c54",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Torso Cadera Cadera Torso",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 56,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/056_Posición Cerrada en Espalda 2_Torso Cadera Cadera Torso_Posición Cerrada en Espalda 2_D3_GRW_7t.mp4",
+            "file8t": "Figuras/056_Posición Cerrada en Espalda 2_Torso Cadera Cadera Torso_Posición Cerrada en Espalda 2_D3_GRW_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c55",
+      "posIni": "Posición Cerrada en Espalda 2",
+      "figura": "Traslado + Giro Hombre",
+      "posFin": "Posición Abierta Relajada Paralelas al Aire 1",
+      "orden": 57,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/057_Posición Cerrada en Espalda 2_Traslado + Giro Hombre_Posición Abierta Relajada Paralelas al Aire 1_D3_BCT_7t.mp4",
+            "file8t": "Figuras/057_Posición Cerrada en Espalda 2_Traslado + Giro Hombre_Posición Abierta Relajada Paralelas al Aire 1_D3_BCT_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c56",
+      "posIni": "Pretzel al Hombro",
+      "figura": "Ondita + Volcada",
+      "posFin": "",
+      "orden": 58,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/058_Pretzel al Hombro_Ondita + Volcada_---_D3_DJL_7t.mp4",
+            "file8t": "Figuras/058_Pretzel al Hombro_Ondita + Volcada_---_D3_DJL_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c57",
+      "posIni": "Pretzel Clásico",
+      "figura": "Ondita",
+      "posFin": "Pretzel Clásico",
+      "orden": 59,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/059_Pretzel Clásico_Ondita_Pretzel Clásico_D3_PWU_7t.mp4",
+            "file8t": "Figuras/059_Pretzel Clásico_Ondita_Pretzel Clásico_D3_PWU_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c58",
+      "posIni": "Pretzel Clásico",
+      "figura": "Paseo Pretzel Clásico + Salida Pretzel Clásico",
+      "posFin": "Posición Abierta Relajada Paralelas 1",
+      "orden": 60,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/060_Pretzel Clásico_Paseo Pretzel Clásico + Salida Pretzel Clásico_Posición Abierta Relajada Paralelas 1_D4_OVC_7t.mp4",
+            "file8t": "Figuras/060_Pretzel Clásico_Paseo Pretzel Clásico + Salida Pretzel Clásico_Posición Abierta Relajada Paralelas 1_D4_OVC_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c59",
+      "posIni": "Pretzel sin Agarre",
+      "figura": "Caminata Conjunta + Ondita",
+      "posFin": "Pretzel sin Agarre",
+      "orden": 61,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/061_Pretzel sin Agarre_Caminata Conjunta + Ondita_Pretzel sin Agarre_D3_UXR_7t.mp4",
+            "file8t": "Figuras/061_Pretzel sin Agarre_Caminata Conjunta + Ondita_Pretzel sin Agarre_D3_UXR_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c60",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Bandeja + Helicóptero",
+      "posFin": "",
+      "orden": 62,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/062_Sombra Mujer Clásico_Bandeja + Helicóptero_---_D3_V2_VQI_7t.mp4",
+            "file8t": "Figuras/062_Sombra Mujer Clásico_Bandeja + Helicóptero_---_D3_V2_VQI_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c61",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Básico + Cadera",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 63,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/063_Sombra Mujer Clásico_Básico + Cadera_Sombra Mujer Clásico_D3_V2_BLR_7t.mp4",
+            "file8t": "Figuras/063_Sombra Mujer Clásico_Básico + Cadera_Sombra Mujer Clásico_D3_V2_BLR_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c62",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Invado + HipRoll Horizontal Mujer",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 64,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/064_Sombra Mujer Clásico_Invado + HipRoll Horizontal Mujer_Sombra Mujer Clásico_D3_DNY_7t.mp4",
+            "file8t": "Figuras/064_Sombra Mujer Clásico_Invado + HipRoll Horizontal Mujer_Sombra Mujer Clásico_D3_DNY_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c63",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Invado + HipRoll Vertical Mujer",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 65,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/065_Sombra Mujer Clásico_Invado + HipRoll Vertical Mujer_Sombra Mujer Clásico_D3_VWM_7t.mp4",
+            "file8t": "Figuras/065_Sombra Mujer Clásico_Invado + HipRoll Vertical Mujer_Sombra Mujer Clásico_D3_VWM_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c64",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Invado + Salida Sombra Mujer Clásico",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 66,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/066_Sombra Mujer Clásico_Invado + Salida Sombra Mujer Clásico_Posición Abierta Relajada Paralelas 2_D2_SWN_7t.mp4",
+            "file8t": "Figuras/066_Sombra Mujer Clásico_Invado + Salida Sombra Mujer Clásico_Posición Abierta Relajada Paralelas 2_D2_SWN_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c65",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Invado + Salida Sombra Mujer Clásico",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 67,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/067_Sombra Mujer Clásico_Invado + Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_PBH_7t.mp4",
+            "file8t": "Figuras/067_Sombra Mujer Clásico_Invado + Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_PBH_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c66",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Ondita + Volcada",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 68,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/068_Sombra Mujer Clásico_Ondita + Volcada_Sombra Mujer Clásico_D3_NBI_7t.mp4",
+            "file8t": "Figuras/068_Sombra Mujer Clásico_Ondita + Volcada_Sombra Mujer Clásico_D3_NBI_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c67",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Retroceso + Ondita",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 69,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/069_Sombra Mujer Clásico_Retroceso + Ondita_Sombra Mujer Clásico_D2_BOZ_7t.mp4",
+            "file8t": "Figuras/069_Sombra Mujer Clásico_Retroceso + Ondita_Sombra Mujer Clásico_D2_BOZ_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c68",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Retroceso + Salida Sombra Mujer Clásico",
+      "posFin": "",
+      "orden": 70,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/070_Sombra Mujer Clásico_Retroceso + Salida Sombra Mujer Clásico_---_D4_URD_7t.mp4",
+            "file8t": "Figuras/070_Sombra Mujer Clásico_Retroceso + Salida Sombra Mujer Clásico_---_D4_URD_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c69",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Retroceso + Salida Sombra Mujer Clásico",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 71,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/071_Sombra Mujer Clásico_Retroceso + Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_EHQ_7t.mp4",
+            "file8t": "Figuras/071_Sombra Mujer Clásico_Retroceso + Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_EHQ_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c70",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Salida Sombra Mujer Clásico",
+      "posFin": "",
+      "orden": 72,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/072_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_---_D2_YPA_7t.mp4",
+            "file8t": "Figuras/072_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_---_D2_YPA_8t.mp4"
+          }
+        ],
+        "D4": [
+          {
+            "file7t": "Figuras/073_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_---_D4_HRU_7t.mp4",
+            "file8t": "Figuras/073_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_---_D4_HRU_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c71",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Salida Sombra Mujer Clásico",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 74,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/074_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_GFO_7t.mp4",
+            "file8t": "Figuras/074_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_GFO_8t.mp4"
+          },
+          {
+            "file7t": "Figuras/075_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_YBO_7t.mp4",
+            "file8t": "Figuras/075_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 1_D3_YBO_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c72",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Salida Sombra Mujer Clásico",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 76,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/076_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 2_D3_JZO_7t.mp4",
+            "file8t": "Figuras/076_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Posición Cerrada en Espalda 2_D3_JZO_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c73",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Salida Sombra Mujer Clásico",
+      "posFin": "Titanic Clásico",
+      "orden": 77,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/077_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Titanic Clásico_D4_RNZ_7t.mp4",
+            "file8t": "Figuras/077_Sombra Mujer Clásico_Salida Sombra Mujer Clásico_Titanic Clásico_D4_RNZ_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c74",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Takata + Ondita",
+      "posFin": "Sombra Mujer Clásico",
+      "orden": 78,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/078_Sombra Mujer Clásico_Takata + Ondita_Sombra Mujer Clásico_D4_KDN_7t.mp4",
+            "file8t": "Figuras/078_Sombra Mujer Clásico_Takata + Ondita_Sombra Mujer Clásico_D4_KDN_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c75",
+      "posIni": "Sombra Mujer Clásico",
+      "figura": "Volcada + Salida Sombra Mujer Clásico",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 79,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/079_Sombra Mujer Clásico_Volcada + Salida Sombra Mujer Clásico_Posición Abierta Relajada Paralelas 2_D3_CAS_7t.mp4",
+            "file8t": "Figuras/079_Sombra Mujer Clásico_Volcada + Salida Sombra Mujer Clásico_Posición Abierta Relajada Paralelas 2_D3_CAS_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c76",
+      "posIni": "Sombra Mujer Enredada",
+      "figura": "Doble Péndulo + Salida Sombra Mujer Enredada",
+      "posFin": "Posición Abierta Relajada Paralelas 1",
+      "orden": 80,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/080_Sombra Mujer Enredada_Doble Péndulo + Salida Sombra Mujer Enredada_Posición Abierta Relajada Paralelas 1_D4_APE_7t.mp4",
+            "file8t": "Figuras/080_Sombra Mujer Enredada_Doble Péndulo + Salida Sombra Mujer Enredada_Posición Abierta Relajada Paralelas 1_D4_APE_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c77",
+      "posIni": "Sombra Mujer Enredada",
+      "figura": "HipRoll Vertical Mujer + Bandeja",
+      "posFin": "Sombra Mujer Enredada",
+      "orden": 81,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/081_Sombra Mujer Enredada_HipRoll Vertical Mujer + Bandeja_Sombra Mujer Enredada_D3_FVO_7t.mp4",
+            "file8t": "Figuras/081_Sombra Mujer Enredada_HipRoll Vertical Mujer + Bandeja_Sombra Mujer Enredada_D3_FVO_8t.mp4"
+          }
+        ],
+        "D4": [
+          {
+            "file7t": "Figuras/082_Sombra Mujer Enredada_HipRoll Vertical Mujer + Bandeja_Sombra Mujer Enredada_D4_QOI_7t.mp4",
+            "file8t": "Figuras/082_Sombra Mujer Enredada_HipRoll Vertical Mujer + Bandeja_Sombra Mujer Enredada_D4_QOI_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c78",
+      "posIni": "Sombra Mujer Enredada",
+      "figura": "HipRoll Vertical Mujer + Salida Sombra Mujer Enredada",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 83,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/083_Sombra Mujer Enredada_HipRoll Vertical Mujer + Salida Sombra Mujer Enredada_Posición Cerrada en Espalda 1_D4_TYQ_7t.mp4",
+            "file8t": "Figuras/083_Sombra Mujer Enredada_HipRoll Vertical Mujer + Salida Sombra Mujer Enredada_Posición Cerrada en Espalda 1_D4_TYQ_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c79",
+      "posIni": "Sombra Mujer Enredada",
+      "figura": "Invado + Salida Sombra Mujer Enredada",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 84,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/084_Sombra Mujer Enredada_Invado + Salida Sombra Mujer Enredada_Posición Abierta Relajada Paralelas 2_D3_KUX_7t.mp4",
+            "file8t": "Figuras/084_Sombra Mujer Enredada_Invado + Salida Sombra Mujer Enredada_Posición Abierta Relajada Paralelas 2_D3_KUX_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c80",
+      "posIni": "Sombra Mujer Enredada",
+      "figura": "Salida Sombra Mujer Enredada + Volcada Lateral",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 85,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/085_Sombra Mujer Enredada_Salida Sombra Mujer Enredada + Volcada Lateral_Posición Abierta Relajada Paralelas 2_D4_YFW_7t.mp4",
+            "file8t": "Figuras/085_Sombra Mujer Enredada_Salida Sombra Mujer Enredada + Volcada Lateral_Posición Abierta Relajada Paralelas 2_D4_YFW_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c81",
+      "posIni": "Sombra Mujer Enredada",
+      "figura": "Salida Sombra Mujer Enredada + Volcada Lateral",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 86,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/086_Sombra Mujer Enredada_Salida Sombra Mujer Enredada + Volcada Lateral_Posición Cerrada en Espalda 1_D3_ZLB_7t.mp4",
+            "file8t": "Figuras/086_Sombra Mujer Enredada_Salida Sombra Mujer Enredada + Volcada Lateral_Posición Cerrada en Espalda 1_D3_ZLB_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c82",
+      "posIni": "Titanic Clásico",
+      "figura": "Contorno",
+      "posFin": "Titanic Clásico",
+      "orden": 87,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/087_Titanic Clásico_Contorno_Titanic Clásico_D2_LQU_7t.mp4",
+            "file8t": "Figuras/087_Titanic Clásico_Contorno_Titanic Clásico_D2_LQU_8t.mp4"
+          }
+        ],
+        "D3": [
+          {
+            "file7t": "Figuras/088_Titanic Clásico_Contorno_Titanic Clásico_D3_KDT_7t.mp4",
+            "file8t": "Figuras/088_Titanic Clásico_Contorno_Titanic Clásico_D3_KDT_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c83",
+      "posIni": "Titanic Clásico",
+      "figura": "Helicóptero + Salida Titanic Clásico + Volcada",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 89,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/089_Titanic Clásico_Helicóptero + Salida Titanic Clásico + Volcada_Posición Cerrada en Espalda 2_D3_KPY_7t.mp4",
+            "file8t": "Figuras/089_Titanic Clásico_Helicóptero + Salida Titanic Clásico + Volcada_Posición Cerrada en Espalda 2_D3_KPY_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c84",
+      "posIni": "Titanic Clásico",
+      "figura": "Invado + Salida Titanic Clásico",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 90,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/090_Titanic Clásico_Invado + Salida Titanic Clásico_Posición Cerrada en Espalda 1_D3_HFM_7t.mp4",
+            "file8t": "Figuras/090_Titanic Clásico_Invado + Salida Titanic Clásico_Posición Cerrada en Espalda 1_D3_HFM_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c85",
+      "posIni": "Titanic Clásico",
+      "figura": "Sentada",
+      "posFin": "Titanic Clásico",
+      "orden": 91,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/091_Titanic Clásico_Sentada_Titanic Clásico_D3_V2_XWF_7t.mp4",
+            "file8t": "Figuras/091_Titanic Clásico_Sentada_Titanic Clásico_D3_V2_XWF_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c86",
+      "posIni": "Titanic Corrido",
+      "figura": "Acerco Alejo",
+      "posFin": "Titanic Corrido",
+      "orden": 92,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/092_Titanic Corrido_Acerco Alejo_Titanic Corrido_D3_PAB_7t.mp4",
+            "file8t": "Figuras/092_Titanic Corrido_Acerco Alejo_Titanic Corrido_D3_PAB_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c87",
+      "posIni": "Titanic Corrido",
+      "figura": "Salida Titanic Corrido + Giro Doble",
+      "posFin": "Posición Abierta Relajada Paralelas 1",
+      "orden": 93,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/093_Titanic Corrido_Salida Titanic Corrido + Giro Doble_Posición Abierta Relajada Paralelas 1_D4_GHR_7t.mp4",
+            "file8t": "Figuras/093_Titanic Corrido_Salida Titanic Corrido + Giro Doble_Posición Abierta Relajada Paralelas 1_D4_GHR_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c88",
+      "posIni": "Titanic Corrido",
+      "figura": "Salida Titanic Corrido + Giro Mujer + Corona Simple Mujer",
+      "posFin": "Posición Cerrada en Espalda 1",
+      "orden": 94,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/094_Titanic Corrido_Salida Titanic Corrido + Giro Mujer + Corona Simple Mujer_Posición Cerrada en Espalda 1_D3_MDF_7t.mp4",
+            "file8t": "Figuras/094_Titanic Corrido_Salida Titanic Corrido + Giro Mujer + Corona Simple Mujer_Posición Cerrada en Espalda 1_D3_MDF_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c89",
+      "posIni": "Titanic Corrido",
+      "figura": "Salida Titanic Corrido + Giro Mujer",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 95,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/095_Titanic Corrido_Salida Titanic Corrido + Giro Mujer_Posición Abierta Relajada Paralelas 2_D4_VQA_7t.mp4",
+            "file8t": "Figuras/095_Titanic Corrido_Salida Titanic Corrido + Giro Mujer_Posición Abierta Relajada Paralelas 2_D4_VQA_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c90",
+      "posIni": "Titanic Corrido",
+      "figura": "Salida Titanic Corrido + Giro Mujer",
+      "posFin": "Posición Cerrada en Espalda 2",
+      "orden": 96,
+      "dificultades": {
+        "D2": [
+          {
+            "file7t": "Figuras/096_Titanic Corrido_Salida Titanic Corrido + Giro Mujer_Posición Cerrada en Espalda 2_D2_DSW_7t.mp4",
+            "file8t": "Figuras/096_Titanic Corrido_Salida Titanic Corrido + Giro Mujer_Posición Cerrada en Espalda 2_D2_DSW_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c91",
+      "posIni": "Titanic Corrido",
+      "figura": "Salida Titanic Corrido + Ondita Frontal",
+      "posFin": "Posición Abierta Relajada Paralelas 1",
+      "orden": 97,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/097_Titanic Corrido_Salida Titanic Corrido + Ondita Frontal_Posición Abierta Relajada Paralelas 1_D3_KAO_7t.mp4",
+            "file8t": "Figuras/097_Titanic Corrido_Salida Titanic Corrido + Ondita Frontal_Posición Abierta Relajada Paralelas 1_D3_KAO_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c92",
+      "posIni": "Titanic Corrido",
+      "figura": "Salida Titanic Corrido",
+      "posFin": "",
+      "orden": 98,
+      "dificultades": {
+        "D3": [
+          {
+            "file7t": "Figuras/098_Titanic Corrido_Salida Titanic Corrido_---_D3_IFM_7t.mp4",
+            "file8t": "Figuras/098_Titanic Corrido_Salida Titanic Corrido_---_D3_IFM_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c93",
+      "posIni": "Titanic Corrido",
+      "figura": "Salida Titanic Corrido",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 99,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/099_Titanic Corrido_Salida Titanic Corrido_Posición Abierta Relajada Paralelas 2_D4_ZDM_7t.mp4",
+            "file8t": "Figuras/099_Titanic Corrido_Salida Titanic Corrido_Posición Abierta Relajada Paralelas 2_D4_ZDM_8t.mp4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c94",
+      "posIni": "Titanic Cruzado",
+      "figura": "Salida Titanic Cruzado",
+      "posFin": "Posición Abierta Relajada Paralelas 2",
+      "orden": 100,
+      "dificultades": {
+        "D4": [
+          {
+            "file7t": "Figuras/100_Titanic Cruzado_Salida Titanic Cruzado_Posición Abierta Relajada Paralelas 2_D4_FKT_7t.mp4",
+            "file8t": "Figuras/100_Titanic Cruzado_Salida Titanic Cruzado_Posición Abierta Relajada Paralelas 2_D4_FKT_8t.mp4"
+          },
+          {
+            "file7t": "Figuras/101_Titanic Cruzado_Salida Titanic Cruzado_Posición Abierta Relajada Paralelas 2_D4_HUA_7t.mp4",
+            "file8t": "Figuras/101_Titanic Cruzado_Salida Titanic Cruzado_Posición Abierta Relajada Paralelas 2_D4_HUA_8t.mp4"
+          }
+        ]
+      }
+    }
+  ]
+}

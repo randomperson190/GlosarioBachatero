@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#111111">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Glosario Bachatero">
+    <title>Glosario Bachatero</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="style.css?v=24">
+</head>
+<body>
+
+    <div id="figure-panel">
+        <div class="dropdown-group" id="fig-dropdown-group">
+            <button class="reset-btn" id="fig-reset-btn" title="Cualquier Figura">↺</button>
+            <div class="dropdown-container" id="fig-dropdown-container">
+                <div class="dropdown-selected" id="fig-selected">💃 Cualquier Figura [🌈]</div>
+                <div class="dropdown-options" id="fig-options-panel">
+                    <input type="text" class="dropdown-search" id="fig-search" placeholder="🔍 Buscar Figura ...">
+                    <div class="dropdown-list" id="fig-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dropdown-group" id="ver-dropdown-group">
+            <button class="reset-btn" id="ver-reset-btn" title="Cualquier Dificultad">↺</button>
+            <div class="dropdown-container" id="ver-dropdown-container">
+                <div class="dropdown-selected" id="ver-selected">🌈</div>
+                <div class="dropdown-options" id="ver-options-panel">
+                    <div class="dropdown-list" id="ver-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pagination-controls">
+            <button id="prev-page-btn" class="page-btn" title="Anterior (Flecha Izq)">&lt;</button>
+            <span id="page-indicator"><input type="number" id="page-indicator-input" min="1" step="1" inputmode="numeric"><span class="page-indicator-sep">/</span><span id="page-indicator-total">1</span></span>
+            <button id="next-page-btn" class="page-btn" title="Siguiente (Flecha Der)">&gt;</button>
+        </div>
+
+    </div>
+
+    <div id="position-panel">
+        <div class="dropdown-group" id="posini-dropdown-group">
+            <button class="reset-btn" id="posini-reset-btn" title="Cualquier Posición Inicial">↺</button>
+            <div class="dropdown-container" id="posini-dropdown-container">
+                <div class="dropdown-selected" id="posini-selected"><span class="pos-dot pos-dot-ini"></span>Cualquier Posición Inicial [🌈]</div>
+                <div class="dropdown-options" id="posini-options-panel">
+                    <input type="text" class="dropdown-search" id="posini-search" placeholder="🔍 Buscar Posición Inicial ...">
+                    <div class="dropdown-list" id="posini-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dropdown-group" id="posfin-dropdown-group">
+            <button class="reset-btn" id="posfin-reset-btn" title="Cualquier Posición Final">↺</button>
+            <div class="dropdown-container" id="posfin-dropdown-container">
+                <div class="dropdown-selected" id="posfin-selected"><span class="pos-dot pos-dot-fin"></span>Cualquier Posición Final [🌈]</div>
+                <div class="dropdown-options" id="posfin-options-panel">
+                    <input type="text" class="dropdown-search" id="posfin-search" placeholder="🔍 Buscar Posición Final ...">
+                    <div class="dropdown-list" id="posfin-list"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="ui-panel">
+        <div class="song-selector-group">
+            <div class="dropdown-container" id="song-dropdown-container">
+                <div class="dropdown-selected" id="song-selected">🎧 Seleccionar Canción...</div>
+                <div class="dropdown-options" id="song-options-panel">
+                    <input type="text" class="dropdown-search" id="song-search" placeholder="🔍 Buscar canción...">
+                    <div class="dropdown-list" id="song-list"></div>
+                </div>
+            </div>
+            <button class="sort-btn active" id="sort-abc" title="Ordenar Alfabéticamente">A-Z</button>
+            <button class="sort-btn" id="sort-bpm" title="Ordenar por BPM">BPM</button>
+        </div>
+
+        <div class="controls-box">
+            <button id="play-btn" class="btn-yellow" title="Reproducir (Espacio)">
+                <span id="play-icon" class="icon-play">▶</span>
+            </button>
+            <div class="divider"></div>
+            <button id="refresh-btn" class="action-btn" title="Reiniciar (R)">🔄</button>
+            <div class="divider"></div>
+            <button id="mute-btn" class="action-btn" title="Silenciar (M)">🔊</button>
+            <div class="divider"></div>
+            <div class="slow-container">
+                <div class="rate-wrapper">
+                    <span class="rate-btn" id="rate-minus">-</span>
+                    <span class="rate-input-box">
+                        <span class="rate-prefix">x</span>
+                        <input type="number" id="rate-input" value="1.00" step="0.01" min="0.01" max="3.00" title="Velocidad (+ / -)">
+                    </span>
+                    <span class="rate-btn" id="rate-plus">+</span>
+                </div>
+                <span id="calc-bpm-label">--- BPM</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="video-container">
+        <div class="video-side"></div>
+        <div class="video-center" id="video-grid-wrapper">
+            <div id="loading-indicator">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Cargando...</div>
+                <div class="loading-count">0 / 0</div>
+            </div>
+        </div>
+        <div class="video-side"></div>
+        <audio id="audio-player"></audio>
+    </div>
+
+    <div id="pull-indicator"><div class="pull-spinner"></div></div>
+
+    <script src="script.js?v=22"></script>
+</body>
+</html>
