@@ -18,8 +18,19 @@ if ('serviceWorker' in navigator) {
         const codeName = mediaError ? (codes[mediaError.code] || mediaError.code) : '?';
         banner.style.display = 'block';
         if (barEl) barEl.style.width = '0%';
-        textEl.textContent = `Error (${kind}) [${codeName}]: ${url}`;
+        const errText = `Error (${kind}) [${codeName}]: ${url}`;
+        textEl.dataset.lastError = errText;
+        textEl.textContent = errText + ' — pidiendo detalle al SW...';
         console.error(`Error de ${kind}`, codeName, url, mediaError);
+
+        // Pedile al SW que diga EXACTAMENTE qué tiene guardado para esta URL
+        // puntual (status, content-type, tamaño declarado vs tamaño real del
+        // blob) — así vemos el dato concreto en vez de seguir adivinando.
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'INSPECT_URL', url });
+        } else {
+            textEl.textContent = errText + ' (sin SW controller para inspeccionar)';
+        }
     };
 
     // Botón fijo (ℹ️, abajo a la derecha) para consultar en cualquier momento
@@ -80,6 +91,7 @@ if ('serviceWorker' in navigator) {
         if (!banner || !textEl || !barEl) return;
 
         if (data.type === 'sw-cache-progress' || data.type === 'sw-cache-done') {
+            delete textEl.dataset.lastError;
             const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
             banner.style.display = 'block';
             barEl.style.width = pct + '%';
@@ -117,6 +129,29 @@ if ('serviceWorker' in navigator) {
             const v = data.videos || { done: 0, total: 0 };
             const c = data.canciones || { done: 0, total: 0 };
             textEl.textContent = `En cache ahora: Figuras ${Math.floor(v.done / 2)}/${Math.floor(v.total / 2)} · Canciones ${c.done}/${c.total}`;
+        } else if (data.type === 'sw-inspect-result') {
+            // Respuesta puntual a INSPECT_URL, disparada automáticamente
+            // cuando un video/audio falla — muestra qué hay REALMENTE
+            // guardado para esa URL exacta (o si ni siquiera está cacheada).
+            banner.style.display = 'block';
+            let detail;
+            if (!data.cached) {
+                detail = `NO está en cache${data.error ? ' (' + data.error + ')' : ''}`;
+            } else {
+                detail = `cache: status=${data.status} ct=${data.contentType || '?'} `
+                    + `content-length=${data.contentLength || '?'} content-range=${data.contentRange || '-'} `
+                    + `bytes reales=${data.actualBlobSize != null ? data.actualBlobSize : (data.blobReadError || '?')}`;
+            }
+            const prefix = textEl.dataset.lastError ? textEl.dataset.lastError + ' | ' : '';
+            textEl.textContent = prefix + detail;
+            console.error('[SW inspect]', data);
+        } else if (data.type === 'sw-fetch-error') {
+            // El SW tiró una excepción real al intentar servir este pedido
+            // (ej: serveRange falló) — esto antes se tragaba en silencio.
+            banner.style.display = 'block';
+            const prefix = textEl.dataset.lastError ? textEl.dataset.lastError + ' | ' : '';
+            textEl.textContent = `${prefix}SW error (${data.stage}): ${data.message} — range=${data.range || '-'} — ${data.url}`;
+            console.error('[SW fetch error]', data);
         }
     }
 

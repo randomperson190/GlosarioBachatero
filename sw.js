@@ -244,6 +244,43 @@ function cacheAllMedia(providedUrls) {
   return mediaCachingPromise;
 }
 
+// Inspección puntual de una URL cacheada, para debug desde la app cuando
+// falla un video/audio — sin esto había que adivinar a ciegas.
+async function inspectUrl(url, target) {
+  const respond = (result) => {
+    if (target) target.postMessage(result);
+    else broadcast(result);
+  };
+  try {
+    const cache = await caches.open(CACHE_VERSION);
+    const cached = await cache.match(url);
+    if (!cached) {
+      respond({ type: 'sw-inspect-result', url, cached: false });
+      return;
+    }
+    const result = {
+      type: 'sw-inspect-result',
+      url,
+      cached: true,
+      status: cached.status,
+      statusText: cached.statusText,
+      contentType: cached.headers.get('content-type'),
+      contentLength: cached.headers.get('content-length'),
+      contentRange: cached.headers.get('content-range'),
+      acceptRanges: cached.headers.get('accept-ranges')
+    };
+    try {
+      const blob = await cached.clone().blob();
+      result.actualBlobSize = blob.size;
+    } catch (err) {
+      result.blobReadError = String(err);
+    }
+    respond(result);
+  } catch (err) {
+    respond({ type: 'sw-inspect-result', url, cached: false, error: String(err) });
+  }
+}
+
 // Reporta cuánto hay cacheado hoy (sin descargar nada) — para mostrar estado al abrir.
 async function reportStatus(target) {
   try {
@@ -305,6 +342,9 @@ self.addEventListener('message', (event) => {
   } else if (data.type === 'CACHE_STATUS') {
     const p = reportStatus(event.source);
     if (event.waitUntil) event.waitUntil(p);
+  } else if (data.type === 'INSPECT_URL') {
+    const p = inspectUrl(data.url, event.source);
+    if (event.waitUntil) event.waitUntil(p);
   }
 });
 
@@ -347,14 +387,20 @@ async function serveRange(cachedResponse, rangeHeader) {
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
-      const cached = await caches.match(event.request);
+      let cached = null;
+      try {
+        cached = await caches.match(event.request);
+      } catch (err) {
+        broadcast({ type: 'sw-fetch-error', url: event.request.url, stage: 'match', message: String(err) });
+      }
+
       if (cached) {
         const rangeHeader = event.request.headers.get('range');
         if (rangeHeader) {
           try {
             return await serveRange(cached, rangeHeader);
           } catch (err) {
-            console.warn('No se pudo armar respuesta parcial, sirvo el archivo completo', err);
+            broadcast({ type: 'sw-fetch-error', url: event.request.url, stage: 'serveRange', range: rangeHeader, message: String(err) });
             return cached;
           }
         }
