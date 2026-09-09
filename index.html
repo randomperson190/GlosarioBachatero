@@ -126,5 +126,14 @@
     <div id="pull-indicator"><div class="pull-spinner"></div></div>
 
     <script src="script.js?v=22"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log('SW registrado ✅'))
+            .catch(err => console.error('Error registrando SW', err));
+        });
+      }
+    </script>
 </body>
 </html>

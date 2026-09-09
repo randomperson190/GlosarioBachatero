@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Generar Manifest de Figuras</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩰</text></svg>">
 <style>
     body { font-family: -apple-system, Segoe UI, Arial, sans-serif; background:#111; color:#eee; padding:24px; max-width:900px; margin:0 auto; }
     h1 { font-size:20px; }
@@ -30,10 +31,11 @@
 
 <h1>🩰 Generar figuras-manifest.json</h1>
 <p>
-    Soporta <b>ambos</b> formatos de nombre de archivo:<br>
-    &nbsp;&nbsp;• Nuevo: <code>NNN_PosIni_Figura_PosFin_Dificultad_COD_7t.mp4</code><br>
+    Soporta varios formatos de nombre de archivo, y podés mezclarlos en la misma carpeta sin problema:<br>
+    &nbsp;&nbsp;• Actual: <code>NNN_Dificultad_PosIni_Figura_PosFin_COD_7t.mp4</code><br>
+    &nbsp;&nbsp;• Anterior: <code>NNN_PosIni_Figura_PosFin_Dificultad_COD_7t.mp4</code><br>
     &nbsp;&nbsp;• Viejo: <code>PosIni_Figura_PosFin_Dificultad[-V2]_7t.mp4</code><br>
-    Podés mezclar ambos formatos en la misma carpeta sin problema.
+    La Dificultad (<code>D1</code>, <code>D2</code>...) se detecta esté donde esté dentro del nombre.
 </p>
 
 <div class="box">
@@ -83,33 +85,27 @@ const warningsList = document.getElementById('warnings-list');
 let lastManifest = null;
 
 // ===== PARSEO DE NOMBRES DE ARCHIVO =====
-// Reglas (deducidas comparando el manifest existente con los nombres viejos y
-// nuevos, para que el resultado sea idéntico al que ya venías generando):
+// Reglas (deducidas comparando el manifest existente con los distintos
+// nombrados que fue teniendo el sistema, para que el resultado sea
+// idéntico al que ya venías generando):
 //
-// Formato viejo:  PosIni_Figura_PosFin_Dificultad[-Vn|_Vn]_Xt.mp4
-// Formato nuevo:  NNN_PosIni_Figura_PosFin_Dificultad[-Vn|_Vn]_COD_Xt.mp4
-//                 (mismo cuerpo de siempre, con un número de secuencia
-//                  agregado adelante y un código random agregado antes de
-//                  la velocidad)
+// Formato viejo:    PosIni_Figura_PosFin_Dificultad[-Vn|_Vn]_Xt.mp4
+// Formato anterior: NNN_PosIni_Figura_PosFin_Dificultad[-Vn|_Vn]_COD_Xt.mp4
+// Formato actual:   NNN_Dificultad_PosIni_Figura_PosFin_COD_Xt.mp4
+//                    (mismo cuerpo de siempre, con un número de secuencia
+//                     y un código random agregados; la Dificultad puede
+//                     venir antes de PosIni o después de PosFin según la
+//                     versión)
 //
-// Estrategia: si el primer token es puramente numérico (secuencia nueva),
-// se le saca ese primer token y el anteúltimo (código), y lo que queda se
-// interpreta EXACTAMENTE igual que el formato viejo. Así ambos formatos
-// conviven con una sola lógica.
-//
-// Dentro del cuerpo:
-//   - posIni  = token[0]
-//   - figura  = token[1]
-//   - posFin  = token[2]   (siempre, aunque haya tokens de más entre PosFin
-//                            y la Dificultad — así se comportaba el sistema
-//                            viejo con nombres "raros" que ya existían)
-//   - dificultad = el primer token (buscando desde el índice 3 en adelante,
-//                            sin contar el último que es la velocidad) que
-//                            matchea D + número (ej. "D3", o "D3-V2" del cual
-//                            se toma sólo "D3"). Cualquier variante (-V2,
-//                            _V2, un código, etc.) que venga después no
-//                            afecta la dificultad: sólo hace que el archivo
-//                            sea una "toma" distinta dentro de esa dificultad.
+// Estrategia: si el primer token es puramente numérico (secuencia), se le
+// saca ese primer token y el anteúltimo (código). Con lo que queda, se
+// busca en cualquier posición el token de Dificultad (algo que matchea
+// D + número, ej. "D3" o "D3-V2" del cual se toma sólo "D3"). Los 3
+// tokens restantes, en su mismo orden relativo, son siempre PosIni,
+// Figura y PosFin — no importa si la Dificultad estaba antes o después
+// de ellos. Cualquier variante (-V2, _V2, etc.) que venga pegada a la
+// Dificultad no la afecta: sólo hace que el archivo sea una "toma"
+// distinta dentro de esa dificultad.
 //   - velocidad = último token ("7t" u "8t")
 function parseFilename(filename) {
     const stem = filename.replace(/\.mp4$/i, '');
@@ -120,8 +116,8 @@ function parseFilename(filename) {
     if (/^\d+$/.test(tokens[0]) && tokens.length >= 6) {
         seq = tokens[0];
         code = tokens[tokens.length - 2];
-        // cuerpo equivalente al formato viejo: sacamos la secuencia (índice 0)
-        // y el código (anteúltimo), dejando todo lo demás + la velocidad al final
+        // sacamos la secuencia (índice 0) y el código (anteúltimo),
+        // dejando todo lo demás + la velocidad al final
         tokens = tokens.slice(1, tokens.length - 2).concat([tokens[tokens.length - 1]]);
     }
 
@@ -130,23 +126,28 @@ function parseFilename(filename) {
     const speed = tokens[tokens.length - 1];
     if (!/^\d+t$/i.test(speed)) return { error: `Última parte "${speed}" no es una velocidad válida (se esperaba algo como "7t" u "8t")` };
 
-    const posIniRaw = tokens[0];
-    const figuraRaw = tokens[1];
-    const posFinRaw = tokens[2];
+    const body = tokens.slice(0, -1); // todo menos la velocidad
 
-    let dificultad = null;
-    for (let i = 3; i < tokens.length - 1; i++) {
-        const m = tokens[i].match(/^D(\d+)/i);
-        if (m) { dificultad = 'D' + m[1]; break; }
+    // buscamos la Dificultad esté donde esté dentro del cuerpo
+    let dificultad = null, dificultadIdx = -1;
+    for (let i = 0; i < body.length; i++) {
+        const m = body[i].match(/^D(\d+)/i);
+        if (m) { dificultad = 'D' + m[1]; dificultadIdx = i; break; }
     }
     if (!dificultad) return { error: 'No se encontró una Dificultad (ej. "D1", "D2"...) en el nombre' };
+
+    // el resto de los tokens, sin el de Dificultad, mantiene su orden
+    // relativo: los primeros 3 son siempre PosIni, Figura, PosFin
+    // (cualquier token extra que quede después se ignora, igual que antes)
+    const posTokens = body.slice(0, dificultadIdx).concat(body.slice(dificultadIdx + 1));
+    if (posTokens.length < 3) return { error: 'Faltan PosIni/Figura/PosFin en el nombre' };
 
     const norm = v => (v === '---' ? '' : v);
 
     return {
-        posIni: norm(posIniRaw),
-        figura: norm(figuraRaw),
-        posFin: norm(posFinRaw),
+        posIni: norm(posTokens[0]),
+        figura: norm(posTokens[1]),
+        posFin: norm(posTokens[2]),
         dificultad,
         speed: speed.toLowerCase(),
         seq, code,
