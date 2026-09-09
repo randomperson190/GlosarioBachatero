@@ -4,7 +4,7 @@
 // página, con reintentos y resume — así una descarga larga que se corta (batería,
 // pantalla apagada, se cierra la pestaña) puede retomarse en vez de perderse toda.
 
-const CACHE_VERSION = 'glosario-bachatero-v6'; // subí este número cuando quieras forzar un recache del shell
+const CACHE_VERSION = 'glosario-bachatero-v7'; // subí este número cuando quieras forzar un recache del shell
 const APP_SHELL = [
   './',
   './index.html',
@@ -81,12 +81,35 @@ async function cacheOneWithRetry(cache, url, attempts) {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
+
+      // OJO: acá antes hacíamos cache.put(url, response) directo, "en vivo"
+      // (streaming). En datos móviles inestables eso puede guardar un video
+      // CORTADO a la mitad sin que la promesa rechace — queda "cacheado"
+      // (cache.match lo encuentra, el contador dice 100%) pero es un archivo
+      // incompleto, y por eso al reproducirlo offline tira SRC_NOT_SUPPORTED
+      // aunque el original en el servidor esté perfecto. Para evitarlo,
+      // leemos el body COMPLETO a memoria primero y comparamos el tamaño
+      // real contra el Content-Length declarado — si no coinciden, es un
+      // corte a mitad de descarga y lo tratamos como fallo (reintenta).
+      const blob = await response.blob();
       const lenHeader = response.headers.get('content-length');
-      if (lenHeader && Number(lenHeader) < MIN_MEDIA_BYTES) {
-        throw new Error(`Respuesta sospechosamente chica (${lenHeader} bytes) — ¿404 disfrazado de 200?`);
+      const expectedBytes = lenHeader ? Number(lenHeader) : null;
+
+      if (expectedBytes && blob.size !== expectedBytes) {
+        throw new Error(`Descarga incompleta: ${blob.size} de ${expectedBytes} bytes esperados`);
+      }
+      if (blob.size < MIN_MEDIA_BYTES) {
+        throw new Error(`Respuesta sospechosamente chica (${blob.size} bytes) — ¿404 disfrazado de 200?`);
       }
 
-      await cache.put(url, response);
+      // Guardamos una Response armada a partir del blob YA VERIFICADO
+      // completo, no la response "en vivo" original.
+      const verifiedResponse = new Response(blob, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: new Headers(response.headers)
+      });
+      await cache.put(url, verifiedResponse);
       return true;
     } catch (err) {
       if (i === attempts - 1) {
