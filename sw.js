@@ -157,7 +157,7 @@ async function cacheMissingUrls(cache, urls, label) {
 
   const pending = [];
   for (const url of urls) {
-    const existing = await cache.match(url);
+    const existing = await cache.match(url, { ignoreVary: true });
     if (existing) {
       done++;
     } else {
@@ -253,7 +253,7 @@ async function inspectUrl(url, target) {
   };
   try {
     const cache = await caches.open(CACHE_VERSION);
-    const cached = await cache.match(url);
+    const cached = await cache.match(url, { ignoreVary: true });
     if (!cached) {
       respond({ type: 'sw-inspect-result', url, cached: false });
       return;
@@ -287,9 +287,9 @@ async function reportStatus(target) {
     const cache = await caches.open(CACHE_VERSION);
     const [videoUrls, songUrls] = await Promise.all([getVideoUrls(), getSongUrls()]);
     let videosDone = 0;
-    for (const u of videoUrls) if (await cache.match(u)) videosDone++;
+    for (const u of videoUrls) if (await cache.match(u, { ignoreVary: true })) videosDone++;
     let songsDone = 0;
-    for (const u of songUrls) if (await cache.match(u)) songsDone++;
+    for (const u of songUrls) if (await cache.match(u, { ignoreVary: true })) songsDone++;
 
     const msg = {
       type: 'sw-cache-status',
@@ -389,7 +389,7 @@ self.addEventListener('fetch', (event) => {
     (async () => {
       let cached = null;
       try {
-        cached = await caches.match(event.request);
+        cached = await caches.match(event.request, { ignoreVary: true });
       } catch (err) {
         broadcast({ type: 'sw-fetch-error', url: event.request.url, stage: 'match', message: String(err) });
       }
