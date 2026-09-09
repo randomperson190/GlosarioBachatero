@@ -586,6 +586,10 @@ function renderGrid() {
         vid8t.playsInline = true;
         vid8t.preload = 'auto';
         vid8t.dataset.role = 'main';
+        // Necesario para que el Service Worker pueda interceptar y servir
+        // bien este pedido (sobre todo los que llevan header Range) — sin
+        // esto, el video puede quedarse esperando red aunque ya esté cacheado.
+        vid8t.crossOrigin = 'anonymous';
         vid8t.src = safeUrl(item.file8t);
 
         const vid7t = document.createElement('video');
@@ -595,6 +599,7 @@ function renderGrid() {
         vid7t.preload = 'auto';
         vid7t.loop = true;
         vid7t.dataset.role = 'loop';
+        vid7t.crossOrigin = 'anonymous';
         vid7t.src = safeUrl(item.file7t);
 
         vid8t.addEventListener('ended', () => {
