@@ -4,7 +4,7 @@
 // página, con reintentos y resume — así una descarga larga que se corta (batería,
 // pantalla apagada, se cierra la pestaña) puede retomarse en vez de perderse toda.
 
-const CACHE_VERSION = 'glosario-bachatero-v4'; // subí este número cuando quieras forzar un recache del shell
+const CACHE_VERSION = 'glosario-bachatero-v5'; // subí este número cuando quieras forzar un recache del shell
 const APP_SHELL = [
   './',
   './index.html',
@@ -57,11 +57,36 @@ async function getSongUrls() {
   return Array.from(urls);
 }
 
+// Tamaño mínimo plausible para un video/mp3 real. Si el server devuelve una
+// paginita de error con status 200 (muy común en hostings estáticos mal
+// configurados), cache.add() la guardaría como si fuera el archivo real, sin
+// avisar. Con esto la detectamos y la tratamos como fallo.
+const MIN_MEDIA_BYTES = 20 * 1024; // 20 KB
+
 // Intenta cachear una URL, con reintentos (útil en datos móviles inestables).
+// A diferencia de cache.add(), acá SÍ inspeccionamos la respuesta antes de
+// guardarla, para no cachear silenciosamente un 404 disfrazado de 200.
 async function cacheOneWithRetry(cache, url, attempts) {
   for (let i = 0; i < attempts; i++) {
     try {
-      await cache.add(url);
+      const response = await fetch(url, { cache: 'no-store' });
+
+      if (response.type === 'opaque') {
+        // Cross-origin sin CORS: no podemos leer status ni tamaño, la
+        // guardamos igual (es el comportamiento estándar para este caso).
+        await cache.put(url, response);
+        return true;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const lenHeader = response.headers.get('content-length');
+      if (lenHeader && Number(lenHeader) < MIN_MEDIA_BYTES) {
+        throw new Error(`Respuesta sospechosamente chica (${lenHeader} bytes) — ¿404 disfrazado de 200?`);
+      }
+
+      await cache.put(url, response);
       return true;
     } catch (err) {
       if (i === attempts - 1) {
@@ -136,6 +161,24 @@ function cacheAllMedia() {
       console.error('No se pudo leer script.js para sacar las canciones', err);
       broadcast({ type: 'sw-cache-error', label: 'canciones', message: String(err) });
     }
+
+    // Reporta cuánto espacio quedó realmente usado — así se puede confirmar
+    // si se guardaron de verdad los ~350MB o mucho menos (señal de que algo
+    // se está descartando: cuota superada, respuestas chicas, etc).
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const { usage, quota } = await navigator.storage.estimate();
+        broadcast({
+          type: 'sw-cache-summary',
+          usageMB: Math.round((usage || 0) / 1024 / 1024),
+          quotaMB: Math.round((quota || 0) / 1024 / 1024)
+        });
+      } else {
+        broadcast({ type: 'sw-cache-summary', usageMB: null, quotaMB: null });
+      }
+    } catch (err) {
+      broadcast({ type: 'sw-cache-summary', usageMB: null, quotaMB: null });
+    }
   })();
 
   mediaCachingPromise.finally(() => {
@@ -209,22 +252,62 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// El <video>/<audio> pide con header "Range" (para poder buscar/adelantar).
+// Cache.match() encuentra igual la entrada completa por URL, pero si se la
+// devolvemos entera cuando pidieron un rango, algunos reproductores no la
+// aceptan. Acá recortamos la respuesta ya cacheada para devolver un 206 real.
+async function serveRange(cachedResponse, rangeHeader) {
+  const blob = await cachedResponse.clone().blob();
+  const size = blob.size;
+  const match = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
+  if (!match) return cachedResponse;
+
+  let start = match[1] ? parseInt(match[1], 10) : 0;
+  let end = match[2] ? parseInt(match[2], 10) : size - 1;
+  if (Number.isNaN(start) || start < 0) start = 0;
+  if (Number.isNaN(end) || end >= size) end = size - 1;
+
+  if (start > end || size === 0) {
+    return new Response(null, {
+      status: 416,
+      statusText: 'Range Not Satisfiable',
+      headers: { 'Content-Range': `bytes */${size}` }
+    });
+  }
+
+  const slice = blob.slice(start, end + 1);
+  const headers = new Headers(cachedResponse.headers);
+  headers.set('Content-Range', `bytes ${start}-${end}/${size}`);
+  headers.set('Content-Length', String(slice.size));
+  headers.set('Accept-Ranges', 'bytes');
+
+  return new Response(slice, { status: 206, statusText: 'Partial Content', headers });
+}
+
 // --- FETCH: cache-first (con fallback a red) ---
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cached = await caches.match(event.request);
-      if (cached) return cached;
+      if (cached) {
+        const rangeHeader = event.request.headers.get('range');
+        if (rangeHeader) {
+          return serveRange(cached, rangeHeader);
+        }
+        return cached;
+      }
 
       try {
         const response = await fetch(event.request);
-        if (response.ok && event.request.method === 'GET') {
+        // Nunca cachear una respuesta parcial (206) como si fuera el
+        // archivo completo — eso rompería futuros pedidos por rango.
+        if (response.ok && response.status !== 206 && event.request.method === 'GET') {
           const cache = await caches.open(CACHE_VERSION);
           cache.put(event.request, response.clone());
         }
         return response;
       } catch (err) {
-        return cached || Response.error();
+        return Response.error();
       }
     })()
   );

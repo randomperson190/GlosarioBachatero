@@ -21,17 +21,33 @@ if ('serviceWorker' in navigator) {
             const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
             banner.style.display = 'block';
             barEl.style.width = pct + '%';
-            const labelNice = data.label === 'videos' ? 'Figuras' : 'Canciones';
-            let msg = `${labelNice}: ${data.done}/${data.total}`;
+
+            // Cada figura tiene 2 archivos (toma de 7 y de 8 tiempos), así que
+            // para "Figuras" mostramos el conteo dividido por 2, no el de archivos.
+            const isVideos = data.label === 'videos';
+            const shownDone = isVideos ? Math.floor(data.done / 2) : data.done;
+            const shownTotal = isVideos ? Math.floor(data.total / 2) : data.total;
+            const labelNice = isVideos ? 'Figuras' : 'Canciones';
+
+            let msg = `${labelNice}: ${shownDone}/${shownTotal}`;
             if (data.failed) msg += ` (${data.failed} con error, tocá para reintentar)`;
             textEl.textContent = msg;
-
-            if (data.type === 'sw-cache-done' && !data.failed && data.label === 'canciones') {
-                setTimeout(() => { banner.style.display = 'none'; }, 4000);
-            }
         } else if (data.type === 'sw-cache-error') {
             banner.style.display = 'block';
             textEl.textContent = `Error cacheando ${data.label} — tocá para reintentar`;
+        } else if (data.type === 'sw-cache-summary') {
+            // Llega al final de todo el proceso (videos + canciones). Mostramos
+            // cuánto quedó realmente guardado en el dispositivo — si esto da
+            // muy por debajo de lo esperado, algo se está descartando aunque
+            // la barra haya llegado al 100%.
+            banner.style.display = 'block';
+            barEl.style.width = '100%';
+            if (data.usageMB != null) {
+                textEl.textContent = `Listo — ${data.usageMB} MB guardados para uso offline`;
+            } else {
+                textEl.textContent = 'Descarga offline completa';
+            }
+            setTimeout(() => { banner.style.display = 'none'; }, 7000);
         }
     }
 
