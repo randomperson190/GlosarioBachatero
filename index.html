@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=24">
+    <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -125,15 +125,11 @@
 
     <div id="pull-indicator"><div class="pull-spinner"></div></div>
 
-    <script src="script.js?v=22"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then(() => console.log('SW registrado ✅'))
-            .catch(err => console.error('Error registrando SW', err));
-        });
-      }
-    </script>
+    <div id="offline-cache-banner">
+        <div id="offline-cache-text">Preparando descarga offline...</div>
+        <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
+    </div>
+
+    <script src="script.js?v=23"></script>
 </body>
 </html>

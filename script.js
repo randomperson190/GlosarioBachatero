@@ -1,7 +1,67 @@
 // ===== PWA SERVICE WORKER =====
+// Registra el SW y, una vez activo, dispara el cacheo de videos/canciones para
+// uso offline. Esto va DESPUÉS del install (no adentro), así una descarga larga
+// que se corta no tumba el registro entero — y la próxima vez que se abra la
+// página, retoma solo lo que falta (ver sw.js: cacheMissingUrls).
 if ('serviceWorker' in navigator) {
+
+    function startMediaCaching(controller) {
+        if (!controller) return;
+        controller.postMessage({ type: 'CACHE_MEDIA' });
+    }
+
+    function handleSwMessage(event) {
+        const data = event.data || {};
+        const banner = document.getElementById('offline-cache-banner');
+        const textEl = document.getElementById('offline-cache-text');
+        const barEl = document.getElementById('offline-cache-bar');
+        if (!banner || !textEl || !barEl) return;
+
+        if (data.type === 'sw-cache-progress' || data.type === 'sw-cache-done') {
+            const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
+            banner.style.display = 'block';
+            barEl.style.width = pct + '%';
+            const labelNice = data.label === 'videos' ? 'Figuras' : 'Canciones';
+            let msg = `${labelNice}: ${data.done}/${data.total}`;
+            if (data.failed) msg += ` (${data.failed} con error, tocá para reintentar)`;
+            textEl.textContent = msg;
+
+            if (data.type === 'sw-cache-done' && !data.failed && data.label === 'canciones') {
+                setTimeout(() => { banner.style.display = 'none'; }, 4000);
+            }
+        } else if (data.type === 'sw-cache-error') {
+            banner.style.display = 'block';
+            textEl.textContent = `Error cacheando ${data.label} — tocá para reintentar`;
+        }
+    }
+
+    // Tocar el banner reintenta lo que haya fallado o quedado pendiente.
+    document.addEventListener('DOMContentLoaded', () => {
+        const banner = document.getElementById('offline-cache-banner');
+        if (banner) {
+            banner.addEventListener('click', () => startMediaCaching(navigator.serviceWorker.controller));
+        }
+    });
+
+    navigator.serviceWorker.addEventListener('message', handleSwMessage);
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
+            .then(() => navigator.serviceWorker.ready)
+            .then(async () => {
+                // Pedile al navegador que NO borre el cache bajo presión de espacio
+                // (si no, Android puede vaciar los videos/canciones ya descargados).
+                if (navigator.storage && navigator.storage.persist) {
+                    try { await navigator.storage.persist(); } catch (e) { /* no crítico */ }
+                }
+                if (navigator.serviceWorker.controller) {
+                    startMediaCaching(navigator.serviceWorker.controller);
+                } else {
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        startMediaCaching(navigator.serviceWorker.controller);
+                    }, { once: true });
+                }
+            })
             .catch(err => console.error('Error al registrar SW', err));
     });
 }

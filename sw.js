@@ -1,8 +1,10 @@
 // sw.js — Service Worker para GlosarioBachatero
-// Cachea el "app shell" + todos los videos (figuras-manifest.json) + todas
-// las canciones (parseadas desde script.js) para que la app ande 100% offline.
+// Cachea el "app shell" en el install (rápido). Los videos (figuras-manifest.json)
+// y las canciones (script.js) se cachean aparte, disparados por mensaje desde la
+// página, con reintentos y resume — así una descarga larga que se corta (batería,
+// pantalla apagada, se cierra la pestaña) puede retomarse en vez de perderse toda.
 
-const CACHE_VERSION = 'glosario-bachatero-v3'; // subí este número cuando quieras forzar un recache
+const CACHE_VERSION = 'glosario-bachatero-v4'; // subí este número cuando quieras forzar un recache del shell
 const APP_SHELL = [
   './',
   './index.html',
@@ -20,37 +22,9 @@ function broadcast(msg) {
   });
 }
 
-// Cachea una lista de URLs en tandas chicas, sin que un fallo tumbe el resto,
-// y avisando progreso por postMessage.
-async function cacheUrlsInBatches(cache, urls, label) {
-  const total = urls.length;
-  let done = 0;
-  let failed = 0;
-  const BATCH = 6; // pocas descargas simultáneas: en datos móviles, más batch = más timeouts
-
-  broadcast({ type: 'sw-cache-progress', label, done: 0, total, failed: 0 });
-
-  for (let i = 0; i < urls.length; i += BATCH) {
-    const batch = urls.slice(i, i + BATCH);
-    await Promise.all(
-      batch.map((url) =>
-        cache.add(url).then(
-          () => { done++; },
-          (err) => { failed++; console.warn(`No se pudo cachear (${label})`, url, err); }
-        )
-      )
-    );
-    broadcast({ type: 'sw-cache-progress', label, done, total, failed });
-  }
-
-  console.log(`[${label}] Cacheados ${done}/${total} (${failed} fallaron).`);
-  broadcast({ type: 'sw-cache-done', label, done, total, failed });
-  return { done, total, failed };
-}
-
 // Saca las rutas de video (file7t / file8t) de figuras-manifest.json
 async function getVideoUrls() {
-  const res = await fetch('./figuras-manifest.json');
+  const res = await fetch('./figuras-manifest.json', { cache: 'no-store' });
   const data = await res.json();
   const urls = new Set();
   for (const combo of data.combos || []) {
@@ -67,7 +41,7 @@ async function getVideoUrls() {
 // Saca las rutas de canciones (Canciones/....mp3) del array `canciones` en script.js,
 // ignorando las líneas comentadas con //.
 async function getSongUrls() {
-  const res = await fetch('./script.js');
+  const res = await fetch('./script.js', { cache: 'no-store' });
   const text = await res.text();
   const activeLines = text
     .split('\n')
@@ -83,13 +57,121 @@ async function getSongUrls() {
   return Array.from(urls);
 }
 
-// --- INSTALL ---
+// Intenta cachear una URL, con reintentos (útil en datos móviles inestables).
+async function cacheOneWithRetry(cache, url, attempts) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await cache.add(url);
+      return true;
+    } catch (err) {
+      if (i === attempts - 1) {
+        console.warn(`No se pudo cachear tras ${attempts} intentos:`, url, err);
+        return false;
+      }
+      await new Promise((r) => setTimeout(r, 800 * (i + 1))); // backoff simple
+    }
+  }
+  return false;
+}
+
+// Cachea una lista de URLs en tandas chicas, salteando lo que ya está cacheado
+// (esto es lo que permite RESUMIR una descarga que se cortó antes de terminar).
+async function cacheMissingUrls(cache, urls, label) {
+  const total = urls.length;
+  let done = 0;
+  let failed = 0;
+  const BATCH = 4; // pocas descargas simultáneas: en datos móviles, más batch = más timeouts
+
+  const pending = [];
+  for (const url of urls) {
+    const existing = await cache.match(url);
+    if (existing) {
+      done++;
+    } else {
+      pending.push(url);
+    }
+  }
+
+  broadcast({ type: 'sw-cache-progress', label, done, total, failed });
+
+  for (let i = 0; i < pending.length; i += BATCH) {
+    const batch = pending.slice(i, i + BATCH);
+    await Promise.all(
+      batch.map((url) =>
+        cacheOneWithRetry(cache, url, 3).then((ok) => {
+          if (ok) done++;
+          else failed++;
+        })
+      )
+    );
+    broadcast({ type: 'sw-cache-progress', label, done, total, failed });
+  }
+
+  console.log(`[${label}] Cacheados ${done}/${total} (${failed} fallaron).`);
+  broadcast({ type: 'sw-cache-done', label, done, total, failed });
+  return { done, total, failed };
+}
+
+// Evita que dos disparos de CACHE_MEDIA (ej: page load + botón "reintentar")
+// corran el proceso en paralelo pisándose.
+let mediaCachingPromise = null;
+function cacheAllMedia() {
+  if (mediaCachingPromise) return mediaCachingPromise;
+
+  mediaCachingPromise = (async () => {
+    const cache = await caches.open(CACHE_VERSION);
+
+    try {
+      const videoUrls = await getVideoUrls();
+      await cacheMissingUrls(cache, videoUrls, 'videos');
+    } catch (err) {
+      console.error('No se pudo leer figuras-manifest.json', err);
+      broadcast({ type: 'sw-cache-error', label: 'videos', message: String(err) });
+    }
+
+    try {
+      const songUrls = await getSongUrls();
+      await cacheMissingUrls(cache, songUrls, 'canciones');
+    } catch (err) {
+      console.error('No se pudo leer script.js para sacar las canciones', err);
+      broadcast({ type: 'sw-cache-error', label: 'canciones', message: String(err) });
+    }
+  })();
+
+  mediaCachingPromise.finally(() => {
+    mediaCachingPromise = null;
+  });
+
+  return mediaCachingPromise;
+}
+
+// Reporta cuánto hay cacheado hoy (sin descargar nada) — para mostrar estado al abrir.
+async function reportStatus(target) {
+  try {
+    const cache = await caches.open(CACHE_VERSION);
+    const [videoUrls, songUrls] = await Promise.all([getVideoUrls(), getSongUrls()]);
+    let videosDone = 0;
+    for (const u of videoUrls) if (await cache.match(u)) videosDone++;
+    let songsDone = 0;
+    for (const u of songUrls) if (await cache.match(u)) songsDone++;
+
+    const msg = {
+      type: 'sw-cache-status',
+      videos: { done: videosDone, total: videoUrls.length },
+      canciones: { done: songsDone, total: songUrls.length }
+    };
+    if (target) target.postMessage(msg);
+    else broadcast(msg);
+  } catch (err) {
+    console.error('No se pudo calcular el estado del cache', err);
+  }
+}
+
+// --- INSTALL: solo el shell, chico y rápido. Los medios NO van acá. ---
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_VERSION);
-
-      // 1. Shell básico — item por item, para que si uno falla no tumbe todo lo demás
       for (const url of APP_SHELL) {
         try {
           await cache.add(url);
@@ -97,25 +179,6 @@ self.addEventListener('install', (event) => {
           console.warn('No se pudo cachear (shell)', url, err);
         }
       }
-
-      // 2. Videos de las figuras
-      try {
-        const videoUrls = await getVideoUrls();
-        await cacheUrlsInBatches(cache, videoUrls, 'videos');
-      } catch (err) {
-        console.error('No se pudo leer figuras-manifest.json', err);
-        broadcast({ type: 'sw-cache-error', label: 'videos', message: String(err) });
-      }
-
-      // 3. Canciones
-      try {
-        const songUrls = await getSongUrls();
-        await cacheUrlsInBatches(cache, songUrls, 'canciones');
-      } catch (err) {
-        console.error('No se pudo leer script.js para sacar las canciones', err);
-        broadcast({ type: 'sw-cache-error', label: 'canciones', message: String(err) });
-      }
-
       self.skipWaiting();
     })()
   );
@@ -132,6 +195,18 @@ self.addEventListener('activate', (event) => {
       self.clients.claim();
     })()
   );
+});
+
+// --- MENSAJES: la página dispara el cacheo de medios acá, fuera del install ---
+self.addEventListener('message', (event) => {
+  const data = event.data || {};
+  if (data.type === 'CACHE_MEDIA') {
+    const p = cacheAllMedia();
+    if (event.waitUntil) event.waitUntil(p);
+  } else if (data.type === 'CACHE_STATUS') {
+    const p = reportStatus(event.source);
+    if (event.waitUntil) event.waitUntil(p);
+  }
 });
 
 // --- FETCH: cache-first (con fallback a red) ---
