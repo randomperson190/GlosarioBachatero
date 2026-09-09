@@ -5,6 +5,39 @@
 // página, retoma solo lo que falta (ver sw.js: cacheMissingUrls).
 if ('serviceWorker' in navigator) {
 
+    // ===== DIAGNÓSTICO EN PANTALLA (sin necesitar consola remota) =====
+    // Muestra en el banner cualquier error real de carga de video/audio,
+    // con la URL exacta que falló y el motivo — así vemos qué pasa sin
+    // depender de conectar el teléfono a una compu.
+    window.reportMediaError = function (kind, url, mediaError) {
+        const banner = document.getElementById('offline-cache-banner');
+        const textEl = document.getElementById('offline-cache-text');
+        const barEl = document.getElementById('offline-cache-bar');
+        if (!banner || !textEl) return;
+        const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+        const codeName = mediaError ? (codes[mediaError.code] || mediaError.code) : '?';
+        banner.style.display = 'block';
+        if (barEl) barEl.style.width = '0%';
+        textEl.textContent = `Error (${kind}) [${codeName}]: ${url}`;
+        console.error(`Error de ${kind}`, codeName, url, mediaError);
+    };
+
+    // Botón fijo (ℹ️, abajo a la derecha) para consultar en cualquier momento
+    // cuántas figuras/canciones están REALMENTE en el cache — no descarga
+    // nada nuevo, solo pregunta. Útil para diagnosticar sin conectar a una compu.
+    document.addEventListener('DOMContentLoaded', () => {
+        const diagBtn = document.getElementById('cache-diag-btn');
+        if (diagBtn) {
+            diagBtn.addEventListener('click', () => {
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'CACHE_STATUS' });
+                } else {
+                    window.reportMediaError('status', '(sin controller todavía)', null);
+                }
+            });
+        }
+    });
+
     // Arma las URLs de TODOS los videos/canciones exactamente como las arma
     // el reproductor (misma función safeUrl/encodeURI), para que lo que se
     // cachea en el fondo haga match sí o sí con lo que se pide al reproducir.
@@ -77,6 +110,13 @@ if ('serviceWorker' in navigator) {
                 textEl.textContent = 'Descarga offline completa';
             }
             setTimeout(() => { banner.style.display = 'none'; }, 7000);
+        } else if (data.type === 'sw-cache-status') {
+            // Respuesta a "mantener presionado el banner" — cuánto hay
+            // REALMENTE en el cache ahora mismo, sin descargar nada nuevo.
+            banner.style.display = 'block';
+            const v = data.videos || { done: 0, total: 0 };
+            const c = data.canciones || { done: 0, total: 0 };
+            textEl.textContent = `En cache ahora: Figuras ${Math.floor(v.done / 2)}/${Math.floor(v.total / 2)} · Canciones ${c.done}/${c.total}`;
         }
     }
 
@@ -419,6 +459,9 @@ let loadSequence = 0;
 let mostrarTitulo = (localStorage.getItem('mostrarTitulo') !== '0');
 
 const audioPlayer = document.getElementById('audio-player');
+audioPlayer.addEventListener('error', () => {
+    if (window.reportMediaError) window.reportMediaError('audio', audioPlayer.src, audioPlayer.error);
+});
 const rateInput = document.getElementById('rate-input');
 const bpmLabel = document.getElementById('calc-bpm-label');
 const playBtn = document.getElementById('play-btn');
@@ -591,6 +634,7 @@ function renderGrid() {
         // esto, el video puede quedarse esperando red aunque ya esté cacheado.
         vid8t.crossOrigin = 'anonymous';
         vid8t.src = safeUrl(item.file8t);
+        vid8t.addEventListener('error', () => window.reportMediaError('video8t', vid8t.src, vid8t.error));
 
         const vid7t = document.createElement('video');
         vid7t.className = 'vid-hidden';
@@ -601,6 +645,7 @@ function renderGrid() {
         vid7t.dataset.role = 'loop';
         vid7t.crossOrigin = 'anonymous';
         vid7t.src = safeUrl(item.file7t);
+        vid7t.addEventListener('error', () => window.reportMediaError('video7t', vid7t.src, vid7t.error));
 
         vid8t.addEventListener('ended', () => {
             vid8t.className = 'vid-hidden';
