@@ -1918,6 +1918,32 @@ document.getElementById('menu-title-toggle-item').onclick = () => {
     closeAllDropdowns();
 };
 
+// "🧹 Borrar caché y actualizar": desregistra el Service Worker y borra TODO
+// lo que tenga cacheado (shell de la app + lo descargado para modo avión,
+// porque ambos viven en el mismo cache — ver sw.js), y recarga con un query
+// nuevo para asegurarse de traer la última versión real de la red, no una
+// copia vieja del caché HTTP del navegador. Es destructivo (borra los
+// videos/canciones descargados), así que pide confirmación antes.
+document.getElementById('menu-clear-cache-item').onclick = async () => {
+    closeAllDropdowns();
+    const confirmado = confirm('Esto borra todo lo guardado en este dispositivo (incluido lo descargado para modo avión) y recarga la última versión de la app. ¿Continuar?');
+    if (!confirmado) return;
+    try {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((reg) => reg.unregister()));
+        }
+        if (window.caches) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+    } catch (err) {
+        console.warn('No se pudo limpiar el caché por completo', err);
+    } finally {
+        window.location.href = window.location.pathname + '?_upd=' + Date.now();
+    }
+};
+
 // ===== MODAL: TODOS LOS ATAJOS DE TECLADO CARGADOS =====
 // Lista a mano, en el mismo orden en que aparecen los "case" del switch de
 // abajo, para que quede documentado cada atajo que la app realmente escucha.
