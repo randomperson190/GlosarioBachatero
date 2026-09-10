@@ -10,6 +10,14 @@ if ('serviceWorker' in navigator) {
     // con la URL exacta que falló y el motivo — así vemos qué pasa sin
     // depender de conectar el teléfono a una compu.
     window.reportMediaError = function (kind, url, mediaError) {
+        // Si la pantalla está apagada o la app en segundo plano, el navegador
+        // suele cortar los pedidos de red en curso — eso dispara un error de
+        // audio/video "NETWORK" que no refleja un problema real (el archivo
+        // termina estando bien cacheado, como se ve al recargar después).
+        // Ignoramos estos errores "fantasma" mientras document.hidden sea true;
+        // si hay un problema real, va a volver a fallar en primer plano.
+        if (document.hidden) return;
+
         const banner = document.getElementById('offline-cache-banner');
         const textEl = document.getElementById('offline-cache-text');
         const barEl = document.getElementById('offline-cache-bar');
