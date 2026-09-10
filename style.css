@@ -1097,7 +1097,7 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     .page-btn.video-nav-btn { width: 40px; height: 40px; font-size: 20px; }
     .pos-swap-btn { padding: 3px 22px; }
     .figura-circle { width: 32px; height: 32px; font-size: 16px; }
-    .pos-swap-btn span { font-size: 24px; }
+    .pos-swap-btn span { font-size: 14px; }
 
     .video-side {
         display: none;
