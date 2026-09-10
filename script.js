@@ -56,6 +56,13 @@ if ('serviceWorker' in navigator) {
         return { videoUrls: Array.from(videoUrls), songUrls: Array.from(songUrls) };
     }
 
+    // Distingue una descarga PEDIDA A MANO (click en "Descargar" o tocando el
+    // banner para reintentar) de una que se retoma sola y en silencio al
+    // recargar la página. Solo la primera muestra el banner de progreso y el
+    // aviso final de "Listo — X MB guardados"; la segunda no muestra nada
+    // salvo que haya un error real.
+    let downloadTriggeredManually = false;
+
     async function startMediaCaching(controller) {
         if (!controller) return;
         // Espera a que el manifest ya esté cargado (combosData poblado) antes
@@ -75,6 +82,7 @@ if ('serviceWorker' in navigator) {
         if (!banner || !textEl || !barEl) return;
 
         if (data.type === 'sw-cache-progress' || data.type === 'sw-cache-done') {
+            if (!downloadTriggeredManually) return; // corriendo solo en silencio: no mostrar nada
             delete textEl.dataset.lastError;
             const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
             banner.style.display = 'block';
@@ -95,17 +103,22 @@ if ('serviceWorker' in navigator) {
             textEl.textContent = `Error cacheando ${data.label} — tocá para reintentar`;
         } else if (data.type === 'sw-cache-summary') {
             // Llega al final de todo el proceso (videos + canciones). Mostramos
-            // cuánto quedó realmente guardado en el dispositivo — si esto da
-            // muy por debajo de lo esperado, algo se está descartando aunque
-            // la barra haya llegado al 100%.
-            banner.style.display = 'block';
-            barEl.style.width = '100%';
-            if (data.usageMB != null) {
-                textEl.textContent = `Listo — ${data.usageMB} MB guardados para uso offline`;
+            // cuánto quedó realmente guardado en el dispositivo — pero SOLO si
+            // esta corrida fue pedida a mano; si fue un retomado silencioso al
+            // recargar la página, no mostramos el aviso de "Listo".
+            if (downloadTriggeredManually) {
+                banner.style.display = 'block';
+                barEl.style.width = '100%';
+                if (data.usageMB != null) {
+                    textEl.textContent = `Listo — ${data.usageMB} MB guardados para uso offline`;
+                } else {
+                    textEl.textContent = 'Descarga offline completa';
+                }
+                setTimeout(() => { banner.style.display = 'none'; }, 7000);
             } else {
-                textEl.textContent = 'Descarga offline completa';
+                banner.style.display = 'none';
             }
-            setTimeout(() => { banner.style.display = 'none'; }, 7000);
+            downloadTriggeredManually = false;
         } else if (data.type === 'sw-cache-status') {
             // Respuesta a "mantener presionado el banner" — cuánto hay
             // REALMENTE en el cache ahora mismo, sin descargar nada nuevo.
@@ -139,11 +152,16 @@ if ('serviceWorker' in navigator) {
         }
     }
 
-    // Tocar el banner reintenta lo que haya fallado o quedado pendiente.
+    // Tocar el banner reintenta lo que haya fallado o quedado pendiente —
+    // esto también es una acción explícita del usuario, así que muestra el
+    // banner normalmente (incluido el aviso final de "Listo").
     document.addEventListener('DOMContentLoaded', () => {
         const banner = document.getElementById('offline-cache-banner');
         if (banner) {
-            banner.addEventListener('click', () => startMediaCaching(navigator.serviceWorker.controller));
+            banner.addEventListener('click', () => {
+                downloadTriggeredManually = true;
+                startMediaCaching(navigator.serviceWorker.controller);
+            });
         }
     });
 
@@ -154,10 +172,12 @@ if ('serviceWorker' in navigator) {
     // Guardamos esa decisión en localStorage para que, si la descarga quedó
     // a mitad de camino (se cerró la app, se cortó la conexión, etc.), la
     // próxima vez que se abra la página se retome sola donde quedó — sin
-    // que el usuario tenga que volver a pedirla cada vez.
+    // que el usuario tenga que volver a pedirla cada vez (pero en silencio,
+    // sin mostrar el banner ni el aviso de "Listo" otra vez).
     const OFFLINE_DOWNLOAD_KEY = 'offlineDownloadRequested';
 
     window.requestOfflineDownload = function () {
+        downloadTriggeredManually = true;
         localStorage.setItem(OFFLINE_DOWNLOAD_KEY, '1');
         if (navigator.serviceWorker.controller) {
             startMediaCaching(navigator.serviceWorker.controller);
