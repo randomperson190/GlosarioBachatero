@@ -295,6 +295,21 @@ let filterPosIni = null;
 let filterPosFin = null;
 let filterDificultad = null;
 
+// Toggles "I" (Individuales) y "C" (Combos) del desplegable de Figura:
+// controlan qué categoría de tomas existe en TODA la app (no solo en el
+// desplegable), igual que cualquier otro filtro.
+// - mostrarCombos ("C"): si está activo se muestran las tomas cuya Figura
+//   combina varios movimientos ("A + B"); si se desactiva, esas tomas se
+//   ocultan del todo.
+// - mostrarFigurasIndividuales ("I"): si está activo se muestran las tomas
+//   cuya Figura es un solo movimiento (sin "+"); si se desactiva, esas
+//   tomas se ocultan del todo.
+// Ambos activados por defecto al cargar la página (si algún día se
+// desactivaran los dos a la vez, no quedaría ninguna toma para mostrar).
+// Persistidos igual que el resto de preferencias de la app.
+let mostrarCombos = (localStorage.getItem('mostrarCombos') !== '0');
+let mostrarFigurasIndividuales = (localStorage.getItem('mostrarFigurasIndividuales') !== '0');
+
 // Muchas figuras son "compuestas" (ej. "Gancho + Traslado": son dos
 // movimientos hechos seguidos). Para que el filtro de Figura las encuentre
 // también al buscar por cada movimiento individual, y para poder elegir
@@ -320,6 +335,15 @@ function comboCoincideFigura(combo, valor) {
 // autofiltre a sí misma).
 function combosFiltrados(excluirDimension) {
     return combosData.filter(c => {
+        // Toggles "I"/"C": no respetan 'excluirDimension' (igual que los
+        // demás filtros no lo hacen para SU propia dimensión) porque no son
+        // una dimensión de filtro más: son un interruptor de visibilidad
+        // que aplica siempre, en toda la app.
+        if (typeof c.figura === 'string') {
+            const esCombo = c.figura.includes('+');
+            if (esCombo && !mostrarCombos) return false;
+            if (!esCombo && !mostrarFigurasIndividuales) return false;
+        }
         if (excluirDimension !== 'figura' && filterFigura !== null && !comboCoincideFigura(c, filterFigura)) return false;
         if (excluirDimension !== 'posIni' && filterPosIni !== null && c.posIni !== filterPosIni) return false;
         if (excluirDimension !== 'posFin' && filterPosFin !== null && c.posFin !== filterPosFin) return false;
@@ -384,7 +408,17 @@ function recalcularComboActual() {
         filterPosIni = null;
         filterPosFin = null;
         filterDificultad = null;
-        candidatos = combosData.slice();
+        // OJO: acá antes se usaba combosData.slice() a secas, ignorando los
+        // toggles "I"/"C". Si el usuario los desactivó a los dos a la vez
+        // (no queda ninguna toma: ni Combos ni Figuras individuales), no
+        // hay que volver a mostrar TODO como si nada: se respeta esa
+        // elección y directamente no hay nada para mostrar.
+        candidatos = combosFiltrados(null);
+        if (candidatos.length === 0) {
+            actualizarEtiquetasFiltros(candidatos);
+            actualizarPaginacion();
+            return;
+        }
     }
     candidatos = candidatos.slice().sort(compararCombos);
     actualizarEtiquetasFiltros(candidatos);
@@ -629,6 +663,19 @@ function forzarPrimeraCancionYReiniciar() {
 // contenga a todas (hasta 4x4 = 16). Si esa dificultad tiene más tomas de las
 // que entran en la grilla más grande, las sobrantes no se muestran.
 function renderGrid() {
+    // Si no hay ningún Movimiento que cumpla los filtros/toggles activos
+    // (por ejemplo, "I" y "C" desactivados a la vez), se muestra un aviso
+    // en vez de dejar la grilla vacía o con el último video que quedó.
+    const pasosActuales = construirPasosFiltrados();
+    if (pasosActuales.length === 0) {
+        videoGridWrapper.innerHTML = '';
+        const aviso = document.createElement('div');
+        aviso.id = 'sin-movimientos-aviso';
+        aviso.innerText = 'No hay Movimientos para mostrar';
+        videoGridWrapper.appendChild(aviso);
+        return;
+    }
+
     const fig = currentFigureValue;
     const niv = currentDificultadValue;
     if (!fig || !niv || !figurasData[fig] || !figurasData[fig][niv]) return;
@@ -647,7 +694,6 @@ function renderGrid() {
 
     // Número de página real (1-based) dentro del total de tomas filtradas,
     // para que "Movimiento X" coincida con el contador de arriba (1/101, etc.).
-    const pasosActuales = construirPasosFiltrados();
     let idxPasoActual = indicePasoActual(pasosActuales);
     if (idxPasoActual === -1) idxPasoActual = 0;
     const numeroMovimiento = idxPasoActual + 1;
@@ -708,6 +754,27 @@ function renderGrid() {
         centerOverlay.appendChild(posFinBadge);
 
         cell.appendChild(centerOverlay);
+
+        // ===== CÍRCULOS DE FIGURA: uno por cada parte (o uno solo si es
+        // singular) =====
+        // Si la Figura del video actual es singular, un solo círculo con su
+        // primera letra. Si es compuesta ("A + B"), un círculo por cada
+        // parte, cada uno con la primera letra de esa parte. Clickear cada
+        // uno fija/quita el filtro de Figura con ese componente puntual.
+        if (typeof comboActual.figura === 'string' && comboActual.figura !== '') {
+            const partesFigura = componentesDeFigura(comboActual.figura);
+            const grupoCirculosFigura = document.createElement('div');
+            grupoCirculosFigura.className = 'figura-circle-group';
+            partesFigura.forEach(parte => {
+                const circuloFigura = document.createElement('button');
+                circuloFigura.className = `figura-circle${filterFigura === parte ? ' figura-circle-activo' : ''}`;
+                circuloFigura.innerText = parte.charAt(0).toUpperCase();
+                circuloFigura.title = `Fijar / quitar filtro de Figura: ${parte}`;
+                circuloFigura.onclick = (e) => { e.stopPropagation(); fijarFiltroFiguraComponente(parte); };
+                grupoCirculosFigura.appendChild(circuloFigura);
+            });
+            cell.appendChild(grupoCirculosFigura);
+        }
 
         // Cartel opcional (toggle "T"): el código identificador del archivo de
         // video actual, partido en 2 y a la misma altura que "Movimiento X/X"
@@ -1114,6 +1181,33 @@ document.getElementById('fig-reset-btn').onclick = (e) => {
     aplicarCambioVisual();
     registrarHistorialFiltros();
 };
+// ===== TOGGLES "I" (Individuales) Y "C" (Combos) DE FIGURA =====
+// Los dos filtran qué tomas existen en toda la app (no solo el
+// desplegable de Figura), así que ambos recalculan todo igual que al
+// cambiar cualquier otro filtro (puede hacer que el combo actualmente
+// mostrado deje de existir).
+document.getElementById('fig-individualizar-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    mostrarFigurasIndividuales = !mostrarFigurasIndividuales;
+    localStorage.setItem('mostrarFigurasIndividuales', mostrarFigurasIndividuales ? '1' : '0');
+    document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
+    renderFigureList(document.getElementById('fig-search').value);
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+};
+document.getElementById('fig-combos-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    mostrarCombos = !mostrarCombos;
+    localStorage.setItem('mostrarCombos', mostrarCombos ? '1' : '0');
+    document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
+    renderFigureList(document.getElementById('fig-search').value);
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+};
 document.getElementById('ver-reset-btn').onclick = (e) => {
     e.stopPropagation();
     ultimaDimensionSeleccionada = 'dificultad';
@@ -1194,6 +1288,25 @@ function fijarFiltroDesdeVideoActual(dimension) {
     else if (dimension === 'dificultad') filterDificultad = nuevoValor;
     else if (dimension === 'posIni') filterPosIni = nuevoValor;
     else filterPosFin = nuevoValor;
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+}
+
+// ===== CÍRCULOS DE FIGURA (dentro del video) =====
+// A diferencia del cartel de texto de Figura (que fija/quita la figura
+// COMPLETA con fijarFiltroDesdeVideoActual), estos círculos fijan/quitan el
+// filtro de Figura con un componente puntual: si la figura actual es
+// singular hay un solo círculo (la figura entera); si es compuesta ("A +
+// B") hay un círculo por cada parte, y cada uno filtra por esa parte sola.
+// Clickear el círculo de una parte ya fijada la quita (vuelve a
+// "Cualquiera"); clickear otro círculo cambia el filtro a esa otra parte.
+function fijarFiltroFiguraComponente(valor) {
+    const nuevoValor = (filterFigura === valor) ? null : valor;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    ultimaDimensionSeleccionada = 'figura';
+    filterFigura = nuevoValor;
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
@@ -1527,9 +1640,9 @@ function setupSelects() {
 // disponible por abajo, igual que antes con MaxH).
 function cargarDificultad() {
     const fig = currentFigureValue;
-    if (!fig || !figurasData[fig]) return;
+    if (!fig || !figurasData[fig]) { actualizarPaginacion(); return; }
     const niveles = Object.keys(figurasData[fig]);
-    if (niveles.length === 0) return;
+    if (niveles.length === 0) { actualizarPaginacion(); return; }
 
     if (filterDificultad !== null && niveles.includes(filterDificultad)) {
         currentDificultadValue = filterDificultad;
@@ -1624,6 +1737,13 @@ function actualizarPaginacion() {
     // están ancladas al centro vertical del video.
     if (videoPrevBtn) videoPrevBtn.disabled = prevPageBtn.disabled;
     if (videoNextBtn) videoNextBtn.disabled = nextPageBtn.disabled;
+    // Las flechas de encadenar Posición Inicial/Final tampoco tienen sentido
+    // si no hay ningún Movimiento para mostrar (no hay video del que sacar
+    // la posición actual), así que se ocultan junto con las de navegación.
+    const posIniSwapBtn = document.getElementById('posini-swap-btn');
+    const posFinSwapBtn = document.getElementById('posfin-swap-btn');
+    if (posIniSwapBtn) posIniSwapBtn.style.display = (total === 0) ? 'none' : '';
+    if (posFinSwapBtn) posFinSwapBtn.style.display = (total === 0) ? 'none' : '';
 }
 
 // Salta directamente al Movimiento N (1-based) tecleado en el indicador,
@@ -2297,6 +2417,8 @@ document.addEventListener('keydown', (e) => {
 
 // ===== INICIO =====
 document.getElementById('menu-title-toggle-item').classList.toggle('active', mostrarTitulo);
+document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
+document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
 
 const savedSort = getCookie('songSort');
 if (savedSort === 'bpm') {
