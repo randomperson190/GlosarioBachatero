@@ -33,22 +33,6 @@ if ('serviceWorker' in navigator) {
         }
     };
 
-    // Botón fijo (ℹ️, abajo a la derecha) para consultar en cualquier momento
-    // cuántas figuras/canciones están REALMENTE en el cache — no descarga
-    // nada nuevo, solo pregunta. Útil para diagnosticar sin conectar a una compu.
-    document.addEventListener('DOMContentLoaded', () => {
-        const diagBtn = document.getElementById('cache-diag-btn');
-        if (diagBtn) {
-            diagBtn.addEventListener('click', () => {
-                if (navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({ type: 'CACHE_STATUS' });
-                } else {
-                    window.reportMediaError('status', '(sin controller todavía)', null);
-                }
-            });
-        }
-    });
-
     // Arma las URLs de TODOS los videos/canciones exactamente como las arma
     // el reproductor (misma función safeUrl/encodeURI), para que lo que se
     // cachea en el fondo haga match sí o sí con lo que se pide al reproducir.
@@ -165,6 +149,25 @@ if ('serviceWorker' in navigator) {
 
     navigator.serviceWorker.addEventListener('message', handleSwMessage);
 
+    // La descarga para modo avión YA NO arranca sola al cargar la página —
+    // solo se dispara cuando el usuario toca "Descargar" en el menú (☰).
+    // Guardamos esa decisión en localStorage para que, si la descarga quedó
+    // a mitad de camino (se cerró la app, se cortó la conexión, etc.), la
+    // próxima vez que se abra la página se retome sola donde quedó — sin
+    // que el usuario tenga que volver a pedirla cada vez.
+    const OFFLINE_DOWNLOAD_KEY = 'offlineDownloadRequested';
+
+    window.requestOfflineDownload = function () {
+        localStorage.setItem(OFFLINE_DOWNLOAD_KEY, '1');
+        if (navigator.serviceWorker.controller) {
+            startMediaCaching(navigator.serviceWorker.controller);
+        } else {
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                startMediaCaching(navigator.serviceWorker.controller);
+            }, { once: true });
+        }
+    };
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
             .then(() => navigator.serviceWorker.ready)
@@ -174,12 +177,17 @@ if ('serviceWorker' in navigator) {
                 if (navigator.storage && navigator.storage.persist) {
                     try { await navigator.storage.persist(); } catch (e) { /* no crítico */ }
                 }
-                if (navigator.serviceWorker.controller) {
-                    startMediaCaching(navigator.serviceWorker.controller);
-                } else {
-                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                // Solo retomamos la descarga automáticamente si el usuario ya la
+                // había pedido antes alguna vez. Si nunca la pidió, no se toca
+                // la red hasta que la pida desde el menú.
+                if (localStorage.getItem(OFFLINE_DOWNLOAD_KEY) === '1') {
+                    if (navigator.serviceWorker.controller) {
                         startMediaCaching(navigator.serviceWorker.controller);
-                    }, { once: true });
+                    } else {
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            startMediaCaching(navigator.serviceWorker.controller);
+                        }, { once: true });
+                    }
                 }
             })
             .catch(err => console.error('Error al registrar SW', err));
@@ -906,6 +914,7 @@ function closeAllDropdowns() {
     document.getElementById('ver-options-panel').style.display = 'none';
     document.getElementById('posini-options-panel').style.display = 'none';
     document.getElementById('posfin-options-panel').style.display = 'none';
+    document.getElementById('menu-options-panel').style.display = 'none';
 }
 
 // Si el panel pasado ya estaba abierto, clickear su mismo botón lo cierra
@@ -1671,11 +1680,33 @@ document.getElementById('mute-btn').onclick = (e) => {
     e.target.innerText = audioPlayer.muted ? "🔇" : "🔊";
 };
 
-document.getElementById('title-toggle-btn').onclick = (e) => {
+// Antes era un botón "T" suelto en la barra de controles; ahora vive como
+// opción dentro del menú (☰), pero la función es la misma (y la sigue
+// usando el atajo de teclado "t").
+function toggleMostrarTitulo() {
     mostrarTitulo = !mostrarTitulo;
     localStorage.setItem('mostrarTitulo', mostrarTitulo ? '1' : '0');
-    e.target.classList.toggle('active', mostrarTitulo);
+    document.getElementById('menu-title-toggle-item').classList.toggle('active', mostrarTitulo);
     renderGrid();
+}
+
+// ===== MENÚ (☰): descargar para modo avión + mostrar código identificador =====
+document.getElementById('menu-btn').onclick = (e) => {
+    e.stopPropagation();
+    toggleDropdown('menu-options-panel');
+};
+document.getElementById('menu-options-panel').onclick = e => e.stopPropagation();
+
+document.getElementById('menu-download-item').onclick = () => {
+    if ('serviceWorker' in navigator && window.requestOfflineDownload) {
+        window.requestOfflineDownload();
+    }
+    closeAllDropdowns();
+};
+
+document.getElementById('menu-title-toggle-item').onclick = () => {
+    toggleMostrarTitulo();
+    closeAllDropdowns();
 };
 
 rateInput.oninput = actualizarVelocidades;
@@ -1757,7 +1788,7 @@ document.addEventListener('keydown', (e) => {
             document.getElementById('mute-btn').click();
             break;
         case 't':
-            document.getElementById('title-toggle-btn').click();
+            toggleMostrarTitulo();
             break;
         case '+':
             e.preventDefault();
@@ -1834,7 +1865,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== INICIO =====
-document.getElementById('title-toggle-btn').classList.toggle('active', mostrarTitulo);
+document.getElementById('menu-title-toggle-item').classList.toggle('active', mostrarTitulo);
 
 const savedSort = getCookie('songSort');
 if (savedSort === 'bpm') {

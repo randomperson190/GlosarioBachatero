@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
@@ -92,8 +92,6 @@
             <div class="divider"></div>
             <button id="controls-reset-btn" class="controls-reset-btn" title="Reiniciar Todos los Filtros (F)">↺</button>
             <div class="divider"></div>
-            <button id="title-toggle-btn" class="title-toggle-btn" title="Mostrar Título del Video (T)">T</button>
-            <div class="divider"></div>
             <button id="mute-btn" class="action-btn" title="Silenciar (M)">🔊</button>
             <div class="divider"></div>
             <div class="slow-container">
@@ -106,6 +104,19 @@
                     <span class="rate-btn" id="rate-plus">+</span>
                 </div>
                 <span id="calc-bpm-label">--- BPM</span>
+            </div>
+            <div class="divider"></div>
+            <div class="menu-container" id="menu-container">
+                <button id="menu-btn" class="menu-btn" title="Más opciones">☰</button>
+                <div class="menu-options" id="menu-options-panel">
+                    <div class="menu-item" id="menu-download-item">
+                        <span class="menu-item-label">📥 Descargar para modo avión</span>
+                    </div>
+                    <div class="menu-item menu-item-toggle" id="menu-title-toggle-item" title="Mostrar Título del Video (T)">
+                        <span class="menu-item-label">🏷️ Mostrar código identificador</span>
+                        <span class="menu-item-check" id="menu-title-toggle-check">✓</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -129,8 +140,7 @@
         <div id="offline-cache-text">Preparando descarga offline...</div>
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
-    <button id="cache-diag-btn" title="Ver estado del cache offline">ℹ️</button>
 
-    <script src="script.js?v=23"></script>
+    <script src="script.js?v=24"></script>
 </body>
 </html>
