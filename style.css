@@ -757,6 +757,14 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
 .info-badge-posini { background-color: rgba(0, 174, 255, 0.1); }
 .info-badge-posfin { background-color: rgba(0, 12, 240, 0.1); }
 
+/* Cuando esa dimensión (Figura/Dificultad/Posición Inicial/Posición Final)
+   tiene un filtro activo, el cartel correspondiente lleva un borde blanco
+   interior (box-shadow inset, no toca el tamaño/posición) para que sea
+   evidente de un vistazo que hay una configuración filtrada. */
+.info-badge-filtro-activo { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.95); }
+.grid-3x3 .info-badge-filtro-activo,
+.grid-4x4 .info-badge-filtro-activo { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.95); }
+
 /* Cartel opcional (toggle "T") con el código identificador del archivo de
    video actual, partido en 2: el número al principio (ej. "001") separado
    del borde izquierdo, y las 3 letras finales (ej. "RFN") separadas del
@@ -924,7 +932,7 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
         height: 100%;
     }
 
-    .video-nav-btn { width: 56px; height: 56px; font-size: 22px; }
+    .page-btn.video-nav-btn { width: 56px; height: 56px; font-size: 22px; }
 
     .video-side {
         display: none;

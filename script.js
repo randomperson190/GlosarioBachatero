@@ -680,22 +680,22 @@ function renderGrid() {
         centerOverlay.className = 'figure-center-overlay';
 
         const dificultadBadge = document.createElement('div');
-        dificultadBadge.className = 'info-badge info-badge-dificultad';
+        dificultadBadge.className = `info-badge info-badge-dificultad${filterDificultad !== null ? ' info-badge-filtro-activo' : ''}`;
         dificultadBadge.innerText = mostrarValor(niv);
         centerOverlay.appendChild(dificultadBadge);
 
         const posIniBadge = document.createElement('div');
-        posIniBadge.className = 'info-badge info-badge-posini';
+        posIniBadge.className = `info-badge info-badge-posini${filterPosIni !== null ? ' info-badge-filtro-activo' : ''}`;
         posIniBadge.innerText = mostrarValor(comboActual.posIni);
         centerOverlay.appendChild(posIniBadge);
 
         const figuraBadge = document.createElement('div');
-        figuraBadge.className = 'info-badge info-badge-figura';
+        figuraBadge.className = `info-badge info-badge-figura${filterFigura !== null ? ' info-badge-filtro-activo' : ''}`;
         figuraBadge.innerText = mostrarValor(comboActual.figura);
         centerOverlay.appendChild(figuraBadge);
 
         const posFinBadge = document.createElement('div');
-        posFinBadge.className = 'info-badge info-badge-posfin';
+        posFinBadge.className = `info-badge info-badge-posfin${filterPosFin !== null ? ' info-badge-filtro-activo' : ''}`;
         posFinBadge.innerText = mostrarValor(comboActual.posFin);
         centerOverlay.appendChild(posFinBadge);
 
