@@ -286,7 +286,9 @@ body, html {
     font-weight: bold;
     transition: 0.2s;
 }
-.page-btn:hover:not(:disabled) { background: #5a0c0c; }
+@media (hover: hover) {
+    .page-btn:hover:not(:disabled) { background: #5a0c0c; }
+}
 .page-btn:disabled { opacity: 0.4; cursor: default; }
 
 
@@ -632,7 +634,16 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     font-size: 13px;
     opacity: 0.8;
 }
-.video-nav-btn:hover:not(:disabled) { opacity: 1; }
+/* El opacity:1 en :hover queda "pegado" en pantallas táctiles después de
+   tocar el botón (el navegador no siempre limpia el :hover hasta tocar otra
+   cosa), así que la misma habilitación se veía a veces más opaca y a veces
+   más traslúcida al ir pasando de página en el celular. Restringido a
+   dispositivos que realmente tienen hover (mouse), así en touch la
+   translucidez del botón depende solo de habilitado/deshabilitado, siempre
+   igual. */
+@media (hover: hover) {
+    .video-nav-btn:hover:not(:disabled) { opacity: 1; }
+}
 .video-nav-btn:disabled { opacity: 0.2; cursor: default; filter: grayscale(1); }
 .video-nav-btn-left { left: 8px; }
 .video-nav-btn-right { right: 8px; }
