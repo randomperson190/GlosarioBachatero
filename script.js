@@ -825,6 +825,7 @@ function renderFigureList(searchTerm = "") {
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -855,6 +856,7 @@ function renderPosIniList(searchTerm = "") {
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -882,6 +884,7 @@ function renderPosFinList(searchTerm = "") {
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -960,6 +963,7 @@ function renderDificultadList() {
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -1100,6 +1104,7 @@ document.getElementById('fig-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
 document.getElementById('ver-reset-btn').onclick = (e) => {
     e.stopPropagation();
@@ -1110,6 +1115,7 @@ document.getElementById('ver-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
 document.getElementById('posini-reset-btn').onclick = (e) => {
     e.stopPropagation();
@@ -1120,6 +1126,7 @@ document.getElementById('posini-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
 document.getElementById('posfin-reset-btn').onclick = (e) => {
     e.stopPropagation();
@@ -1130,6 +1137,7 @@ document.getElementById('posfin-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
 
 document.getElementById('fig-options-panel').onclick = e => e.stopPropagation();
@@ -1223,6 +1231,7 @@ function cambiarPorFlechas(direccion) {
 
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 
     // Si el desplegable correspondiente está abierto, refrescar su resaltado.
     if (dimension === 'figura') renderFigureList(document.getElementById('fig-search').value);
@@ -1253,6 +1262,7 @@ function resetearDimensionActual() {
 
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 
     if (dimension === 'figura') renderFigureList(document.getElementById('fig-search').value);
     else if (dimension === 'posIni') renderPosIniList(document.getElementById('posini-search').value);
@@ -1275,6 +1285,7 @@ function resetearTodosLosFiltros() {
 
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 
     // Si algún desplegable está abierto, refrescar su resaltado también.
     renderFigureList(document.getElementById('fig-search').value);
@@ -1282,6 +1293,78 @@ function resetearTodosLosFiltros() {
     renderPosIniList(document.getElementById('posini-search').value);
     renderPosFinList(document.getElementById('posfin-search').value);
 }
+
+// ===== HISTORIAL DE FILTROS (Deshacer / Rehacer, Ctrl+Z / Ctrl+Y) =====
+// Cada vez que cambia alguno de los 4 filtros (Figura, Dificultad, Posición
+// Inicial, Posición Final), por cualquier vía (desplegables, botones ↺,
+// flechas ↑/↓ o Q/E, tecla F/W, atajos numéricos de Dificultad), se guarda
+// una foto de los 4 valores. Ctrl+Z retrocede un paso en ese historial,
+// Ctrl+Y (o Ctrl+Shift+Z) avanza. Los botones ↶ / ↷ junto a A-Z/BPM hacen
+// lo mismo con el mouse/toque.
+let historialFiltros = [{ filterFigura: null, filterPosIni: null, filterPosFin: null, filterDificultad: null }];
+let historialIndice = 0;
+
+function snapshotFiltrosActual() {
+    return { filterFigura, filterPosIni, filterPosFin, filterDificultad };
+}
+
+function mismosFiltros(a, b) {
+    return a.filterFigura === b.filterFigura && a.filterPosIni === b.filterPosIni &&
+        a.filterPosFin === b.filterPosFin && a.filterDificultad === b.filterDificultad;
+}
+
+// Se llama justo después de cada cambio real de filtro. Si el resultado
+// coincide con la foto actual (p. ej. clic en el valor ya seleccionado), no
+// agrega nada. Si hubo Deshacer de por medio, descarta el "futuro" (redo)
+// antes de agregar el nuevo paso, como el Ctrl+Z de cualquier editor.
+function registrarHistorialFiltros() {
+    const snap = snapshotFiltrosActual();
+    if (mismosFiltros(snap, historialFiltros[historialIndice])) return;
+    historialFiltros = historialFiltros.slice(0, historialIndice + 1);
+    historialFiltros.push(snap);
+    historialIndice = historialFiltros.length - 1;
+    actualizarBotonesHistorial();
+}
+
+function actualizarBotonesHistorial() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.disabled = historialIndice <= 0;
+    if (redoBtn) redoBtn.disabled = historialIndice >= historialFiltros.length - 1;
+}
+
+// Aplica una foto del historial a los filtros reales y refresca todo lo que
+// depende de ellos (grilla, desplegables, etiquetas), igual que un cambio
+// de filtro manual.
+function aplicarSnapshotFiltros(snap) {
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filterFigura = snap.filterFigura;
+    filterPosIni = snap.filterPosIni;
+    filterPosFin = snap.filterPosFin;
+    filterDificultad = snap.filterDificultad;
+    recalcularComboActual();
+    aplicarCambioVisual();
+    renderFigureList(document.getElementById('fig-search').value);
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
+    renderDificultadList();
+    actualizarBotonesHistorial();
+}
+
+function deshacerFiltros() {
+    if (historialIndice <= 0) return;
+    historialIndice--;
+    aplicarSnapshotFiltros(historialFiltros[historialIndice]);
+}
+
+function rehacerFiltros() {
+    if (historialIndice >= historialFiltros.length - 1) return;
+    historialIndice++;
+    aplicarSnapshotFiltros(historialFiltros[historialIndice]);
+}
+
+document.getElementById('undo-btn').onclick = deshacerFiltros;
+document.getElementById('redo-btn').onclick = rehacerFiltros;
 
 function cambiarCancion(direccion) {
     const sortActive = document.getElementById('sort-abc').classList.contains('active') ? 'abc' : 'bpm';
@@ -1856,6 +1939,8 @@ const HOTKEYS_INFO = [
     { keys: ['↓ Flecha Abj', 'E'], desc: 'Avanzar un valor en esa misma dimensión' },
     { keys: ['W'], desc: 'Poner en "Cualquiera" sólo la dimensión tocada por última vez' },
     { keys: ['F'], desc: 'Reiniciar TODOS los filtros (Figura, Dificultad, Posición Inicial y Final)' },
+    { keys: ['Ctrl', 'Z'], desc: 'Deshacer el último cambio de filtros' },
+    { keys: ['Ctrl', 'Y'], desc: 'Rehacer el cambio de filtros deshecho' },
 ];
 
 function renderHotkeysModal() {
@@ -1945,6 +2030,20 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // Ctrl+Z / Ctrl+Y (o Ctrl+Shift+Z): deshacer/rehacer cambios de filtros
+    // (Figura, Dificultad, Posición Inicial, Posición Final). Tiene prioridad
+    // sobre cualquier otro atajo, salvo con el modal de atajos abierto.
+    if ((e.ctrlKey || e.metaKey) && key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) rehacerFiltros(); else deshacerFiltros();
+        return;
+    }
+    if ((e.ctrlKey || e.metaKey) && key === 'y') {
+        e.preventDefault();
+        rehacerFiltros();
+        return;
+    }
+
     // Con alguno de los desplegables (Figura, Dificultad, Posición Inicial,
     // Posición Final o Canción) abierto, Flecha Arriba/Abajo sólo mueven un
     // resaltado visual dentro de esa lista (sin aplicar nada todavía), Enter
@@ -2026,6 +2125,7 @@ document.addEventListener('keydown', (e) => {
             filterDificultad = targetDificultad;
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
             break;
         case '|':
         case '0':
@@ -2036,6 +2136,7 @@ document.addEventListener('keydown', (e) => {
             filterDificultad = null;
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
             break;
         case 'arrowleft':
             e.preventDefault();

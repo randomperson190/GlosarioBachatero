@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=36">
+    <link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
 
@@ -81,6 +81,8 @@
             </div>
             <button class="sort-btn active" id="sort-abc" title="Ordenar Alfabéticamente">A-Z</button>
             <button class="sort-btn" id="sort-bpm" title="Ordenar por BPM">BPM</button>
+            <button class="history-btn" id="undo-btn" title="Deshacer (Ctrl+Z)" disabled>↶</button>
+            <button class="history-btn" id="redo-btn" title="Rehacer (Ctrl+Y)" disabled>↷</button>
         </div>
 
         <div class="controls-box">
@@ -158,6 +160,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=30"></script>
+    <script src="script.js?v=31"></script>
 </body>
 </html>

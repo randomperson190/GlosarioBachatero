@@ -382,6 +382,22 @@ body, html {
 .sort-btn:hover { color: white; border-color: #666; }
 .sort-btn.active { color: #ff8f00; border-color: #ff8f00; background: #2a2a2a; }
 
+/* Botones de Deshacer (↶) / Rehacer (↷) de filtros, mismo estilo que los
+   botones de orden A-Z / BPM de al lado, deshabilitados (grisados) cuando
+   no hay historial en esa dirección. */
+.history-btn {
+    background: #222;
+    border: 1px solid #444;
+    color: #888;
+    font-size: 13px;
+    padding: 4px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.history-btn:hover:not(:disabled) { color: white; border-color: #666; }
+.history-btn:disabled { opacity: 0.35; cursor: default; }
+
 .controls-box {
     display: flex;
     align-items: center;
@@ -908,7 +924,7 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
         height: 100%;
     }
 
-    .video-nav-btn { width: 26px; height: 26px; font-size: 12px; }
+    .video-nav-btn { width: 34px; height: 34px; font-size: 14px; }
 
     .video-side {
         display: none;
@@ -993,10 +1009,10 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     .grid-2x2 .info-badge { font-size: 7px; padding: 1px 4px; }
     .grid-3x3 .info-badge { font-size: 5px; padding: 0px 3px; }
     .grid-4x4 .info-badge { font-size: 4px; padding: 0px 2px; }
-    .grid-1x1 .titulo-side-badge { top: 5px; font-size: 18px; padding: 2px 8px; }
-    .grid-2x2 .titulo-side-badge { top: 5px; font-size: 10px; padding: 1px 5px; }
-    .grid-3x3 .titulo-side-badge { top: 5px; font-size: 8px; padding: 0px 3px; }
-    .grid-4x4 .titulo-side-badge { top: 5px; font-size: 6px; padding: 0px 2px; }
+    .grid-1x1 .titulo-side-badge { top: 5px; font-size: 11px; padding: 1px 6px; }
+    .grid-2x2 .titulo-side-badge { top: 5px; font-size: 7px; padding: 1px 4px; }
+    .grid-3x3 .titulo-side-badge { top: 5px; font-size: 5px; padding: 0px 3px; }
+    .grid-4x4 .titulo-side-badge { top: 5px; font-size: 4px; padding: 0px 2px; }
 }
 
 /* ================= PULL TO RELOAD INDICATOR ================= */
