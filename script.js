@@ -1,3 +1,20 @@
+// Mientras la pantalla está apagada o la app en segundo plano, el navegador
+// suele congelar la pestaña: los eventos que "pasaron" ahí (como un error de
+// red del audio) no se disparan al toque, sino recién cuando la pantalla
+// vuelve a encenderse — momento en el que document.hidden YA es false. Por
+// eso no alcanza con chequear document.hidden en el momento del error; hay
+// que recordar que "recién volvimos" y, durante una ventana corta después de
+// eso, seguir ignorando esos errores fantasma (el archivo en general está
+// bien cacheado, como se confirma recargando la página).
+window.__mediaErrorIgnoreUntil = 0;
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        window.__mediaErrorIgnoreUntil = Infinity; // mientras esté oculta, ignorar todo
+    } else {
+        window.__mediaErrorIgnoreUntil = Date.now() + 6000; // 6s de gracia al volver
+    }
+}, { capture: true });
+
 // ===== PWA SERVICE WORKER =====
 // Registra el SW y, una vez activo, dispara el cacheo de videos/canciones para
 // uso offline. Esto va DESPUÉS del install (no adentro), así una descarga larga
@@ -10,13 +27,10 @@ if ('serviceWorker' in navigator) {
     // con la URL exacta que falló y el motivo — así vemos qué pasa sin
     // depender de conectar el teléfono a una compu.
     window.reportMediaError = function (kind, url, mediaError) {
-        // Si la pantalla está apagada o la app en segundo plano, el navegador
-        // suele cortar los pedidos de red en curso — eso dispara un error de
-        // audio/video "NETWORK" que no refleja un problema real (el archivo
-        // termina estando bien cacheado, como se ve al recargar después).
-        // Ignoramos estos errores "fantasma" mientras document.hidden sea true;
-        // si hay un problema real, va a volver a fallar en primer plano.
-        if (document.hidden) return;
+        // Ignora los errores "fantasma" de pantalla apagada / recién resumido
+        // (ver comentario arriba de __mediaErrorIgnoreUntil). Si el problema
+        // es real, va a volver a fallar una vez pasada la ventana de gracia.
+        if (document.hidden || Date.now() < window.__mediaErrorIgnoreUntil) return;
 
         const banner = document.getElementById('offline-cache-banner');
         const textEl = document.getElementById('offline-cache-text');
