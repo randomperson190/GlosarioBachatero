@@ -386,8 +386,8 @@ body, html {
    botones de orden A-Z / BPM de al lado, deshabilitados (grisados) cuando
    no hay historial en esa dirección. */
 .history-btn {
-    background: #ff8f00;
-    border: 1px solid #ff8f00;
+    background: #333333;
+    border: 1px solid #555555;
     color: #ffffff;
     font-size: 13px;
     padding: 4px 7px;
@@ -395,7 +395,7 @@ body, html {
     cursor: pointer;
     transition: all 0.2s;
 }
-.history-btn:hover:not(:disabled) { filter: brightness(1.1); border-color: #ffa826; }
+.history-btn:hover:not(:disabled) { background-color: #444444; }
 .history-btn:disabled { opacity: 0.35; cursor: default; }
 
 .controls-box {
@@ -924,7 +924,7 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
         height: 100%;
     }
 
-    .video-nav-btn { width: 44px; height: 44px; font-size: 18px; }
+    .video-nav-btn { width: 56px; height: 56px; font-size: 22px; }
 
     .video-side {
         display: none;
