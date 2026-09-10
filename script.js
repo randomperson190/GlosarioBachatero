@@ -682,21 +682,29 @@ function renderGrid() {
         const dificultadBadge = document.createElement('div');
         dificultadBadge.className = `info-badge info-badge-dificultad${filterDificultad !== null ? ' info-badge-filtro-activo' : ''}`;
         dificultadBadge.innerText = mostrarValor(niv);
+        dificultadBadge.title = 'Fijar / quitar filtro de Dificultad';
+        dificultadBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('dificultad'); };
         centerOverlay.appendChild(dificultadBadge);
 
         const posIniBadge = document.createElement('div');
         posIniBadge.className = `info-badge info-badge-posini${filterPosIni !== null ? ' info-badge-filtro-activo' : ''}`;
         posIniBadge.innerText = mostrarValor(comboActual.posIni);
+        posIniBadge.title = 'Fijar / quitar filtro de Posición Inicial';
+        posIniBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('posIni'); };
         centerOverlay.appendChild(posIniBadge);
 
         const figuraBadge = document.createElement('div');
         figuraBadge.className = `info-badge info-badge-figura${filterFigura !== null ? ' info-badge-filtro-activo' : ''}`;
         figuraBadge.innerText = mostrarValor(comboActual.figura);
+        figuraBadge.title = 'Fijar / quitar filtro de Figura';
+        figuraBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('figura'); };
         centerOverlay.appendChild(figuraBadge);
 
         const posFinBadge = document.createElement('div');
         posFinBadge.className = `info-badge info-badge-posfin${filterPosFin !== null ? ' info-badge-filtro-activo' : ''}`;
         posFinBadge.innerText = mostrarValor(comboActual.posFin);
+        posFinBadge.title = 'Fijar / quitar filtro de Posición Final';
+        posFinBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('posFin'); };
         centerOverlay.appendChild(posFinBadge);
 
         cell.appendChild(centerOverlay);
@@ -1138,6 +1146,100 @@ document.getElementById('posfin-reset-btn').onclick = (e) => {
     recalcularComboActual();
     aplicarCambioVisual();
     registrarHistorialFiltros();
+};
+
+// ===== AYUDA: VALOR ACTUAL "TAL COMO SE VE EN EL VIDEO" =====
+// Devuelve el valor real de una dimensión (figura/posIni/posFin/dificultad)
+// del combo que está mostrando el video en este momento, sin importar qué
+// filtro esté (o no) seleccionado en los desplegables. Preserva "" (figuras/
+// posiciones sin nombre propio, "---" en pantalla) tal cual, igual que hace
+// activarComboCompleto; sólo devuelve null si todavía no hay combo cargado.
+function valorActualDelVideo(dimension) {
+    if (dimension === 'dificultad') {
+        return (typeof currentDificultadValue === 'string') ? currentDificultadValue : null;
+    }
+    const combo = comboByKey[currentFigureValue] || {};
+    if (dimension === 'figura') return (typeof combo.figura === 'string') ? combo.figura : null;
+    if (dimension === 'posIni') return (typeof combo.posIni === 'string') ? combo.posIni : null;
+    return (typeof combo.posFin === 'string') ? combo.posFin : null;
+}
+
+// ===== FIJAR/QUITAR FILTRO DESDE EL VIDEO (carteles centrales clickeables) =====
+// Al clickear el cartel de Dificultad/Posición Inicial/Figura/Posición Final
+// dentro del video:
+// - Si esa dimensión NO tiene filtro activo (sin borde blanco interior), se
+//   fija como filtro usando el valor que realmente se está viendo ahora (no
+//   el que estuviera elegido en el menú).
+// - Si esa dimensión YA tiene filtro activo (con borde blanco interior), se
+//   quita ese filtro (vuelve a "Cualquiera"), igual que el botón ↺ del menú.
+function filtroActivoEnDimension(dimension) {
+    if (dimension === 'figura') return filterFigura !== null;
+    if (dimension === 'dificultad') return filterDificultad !== null;
+    if (dimension === 'posIni') return filterPosIni !== null;
+    return filterPosFin !== null;
+}
+
+function fijarFiltroDesdeVideoActual(dimension) {
+    const yaActivo = filtroActivoEnDimension(dimension);
+    let nuevoValor;
+    if (yaActivo) {
+        nuevoValor = null;
+    } else {
+        nuevoValor = valorActualDelVideo(dimension);
+        if (nuevoValor === null) return;
+    }
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    ultimaDimensionSeleccionada = dimension;
+    if (dimension === 'figura') filterFigura = nuevoValor;
+    else if (dimension === 'dificultad') filterDificultad = nuevoValor;
+    else if (dimension === 'posIni') filterPosIni = nuevoValor;
+    else filterPosFin = nuevoValor;
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+}
+
+// ===== BOTONES ENCADENAR POSICIÓN (dentro del video) =====
+// Botón izquierdo (círculo celeste): la Posición Final que se ve AHORA en el
+// video pasa a ser la nueva Posición Inicial, y la Posición Final se resetea
+// a "Cualquiera". Botón derecho (círculo azul): al revés, la Posición
+// Inicial que se ve ahora pasa a ser la nueva Posición Final, y la Posición
+// Inicial se resetea. Usan el valor real del video actual (no el filtro
+// elegido en el menú, que puede ser "Cualquiera"). Sirve para encadenar:
+// terminaste en una posición y la usás como punto de partida del próximo
+// movimiento (o viceversa), sin tener que ir a buscarla de nuevo en los
+// desplegables.
+document.getElementById('posini-swap-btn').onclick = () => {
+    if (combosData.length === 0) return;
+    const nuevaPosIni = valorActualDelVideo('posFin');
+    if (nuevaPosIni === null) return;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filterPosIni = nuevaPosIni;
+    filterPosFin = null;
+    ultimaDimensionSeleccionada = 'posIni';
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
+};
+
+document.getElementById('posfin-swap-btn').onclick = () => {
+    if (combosData.length === 0) return;
+    const nuevaPosFin = valorActualDelVideo('posIni');
+    if (nuevaPosFin === null) return;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filterPosFin = nuevaPosFin;
+    filterPosIni = null;
+    ultimaDimensionSeleccionada = 'posFin';
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
 };
 
 document.getElementById('fig-options-panel').onclick = e => e.stopPropagation();

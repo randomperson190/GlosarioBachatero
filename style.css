@@ -648,6 +648,48 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
 .video-nav-btn-left { left: 8px; }
 .video-nav-btn-right { right: 8px; }
 
+/* Flechas para encadenar Posición Inicial/Final (ver handlers en script.js).
+   Van cerca de las MISMAS posiciones horizontales que los carteles del
+   código identificador (left/right, ahora al 6%), pero del lado de abajo
+   del video en vez de arriba, con la misma separación del borde (5px) que
+   ese cartel tiene arriba. Izquierda (celeste ←): fija la Posición Inicial
+   usando la Posición Final que se ve ahora, y resetea la Posición Final.
+   Derecha (azul →): fija la Posición Final usando la Posición Inicial que
+   se ve ahora, y resetea la Posición Inicial. Mismos colores que usan los
+   pos-dot del resto de la app para cada dimensión. Borde oscuro (no blanco)
+   para que no compita visualmente con los bordes claros de otros carteles. */
+.pos-swap-btn {
+    position: absolute;
+    bottom: 5px;
+    z-index: 20;
+    background-color: rgba(120, 120, 120, 0.55);
+    border: 1px solid rgba(0, 0, 0, 0.85);
+    border-radius: 8px;
+    padding: 1px 18px;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+}
+.pos-swap-btn-ini { left: 6%; }
+.pos-swap-btn-fin { right: 6%; }
+.pos-swap-btn span {
+    display: inline-block;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    transform: scaleX(1.6);
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.75);
+}
+@media (hover: hover) {
+    .pos-swap-btn:hover { opacity: 1; }
+}
+.pos-swap-btn-fin span { color: #000CF0; }
+.pos-swap-btn-ini span { color: #00AEFF; }
+
 .video-grid {
     display: grid;
     width: 100%;
@@ -751,7 +793,19 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
        lado), pudiendo usar hasta el 100% del ancho del overlay. */
     width: max-content;
     max-width: 100%;
+    cursor: pointer;
+    pointer-events: auto;
 }
+
+/* Los carteles (Dificultad/Posición Inicial/Figura/Posición Final) también
+   funcionan como botón para fijar esa dimensión como filtro, usando el valor
+   que se ve en el video actual (ver fijarFiltroDesdeVideoActual en
+   script.js). Este resalte al pasar el mouse deja claro que son clickeables,
+   sin tocar el borde blanco que ya indica "filtro activo". */
+@media (hover: hover) {
+    .info-badge:hover { filter: brightness(1.35); }
+}
+.info-badge:active { filter: brightness(1.6); }
 
 /* Figura y Dificultad llevan un borde más claro/oscuro que su propio fondo
    (en vez de blanco), para distinguirlas de las Posiciones. */
@@ -773,6 +827,14 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
    interior (box-shadow inset, no toca el tamaño/posición) para que sea
    evidente de un vistazo que hay una configuración filtrada. */
 .info-badge-filtro-activo { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.95); }
+
+/* Caso especial Figura: su borde propio (verde) reemplaza directamente al
+   borde blanco de "filtro activo" (en vez de sumarse), para que no se vean
+   2 bordes distintos superpuestos cuando el filtro de Figura está fijado. */
+.info-badge-figura.info-badge-filtro-activo {
+    border-color: rgba(255, 255, 255, 0.95);
+    box-shadow: none;
+}
 
 /* Cartel opcional (toggle "T") con el código identificador del archivo de
    video actual, partido en 2: el número al principio (ej. "001") separado
@@ -942,6 +1004,8 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     }
 
     .page-btn.video-nav-btn { width: 40px; height: 40px; font-size: 20px; }
+    .pos-swap-btn { padding: 3px 22px; }
+    .pos-swap-btn span { font-size: 24px; }
 
     .video-side {
         display: none;
