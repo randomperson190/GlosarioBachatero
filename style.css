@@ -86,7 +86,7 @@ body, html {
 
 .reset-btn {
     flex-shrink: 0;
-    width: 35px;
+    width: 24px;
     padding: 0;
     background-color: #003300;
     border: 1px solid #004400;
@@ -95,7 +95,7 @@ body, html {
     border-top-left-radius: 6px;
     border-bottom-left-radius: 6px;
     color: white;
-    font-size: 17px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -128,13 +128,23 @@ body, html {
     background-repeat: no-repeat;
     background-position: right 6px center;
     background-size: 18px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     user-select: none;
     height: 35px;
     display: flex;
     align-items: center;
+}
+
+/* El texto (y los íconos/puntos que lleve adentro) vive en su propio span
+   que se recorta con "..." dentro del espacio disponible, para que la
+   flechita del desplegable (background-image de arriba) quede siempre
+   limpia y nunca tapada/empujada por un texto largo. */
+.dropdown-label-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
 }
 
 #song-dropdown-container .dropdown-selected {
@@ -192,6 +202,14 @@ body, html {
 }
 .dropdown-item:last-child { border-bottom: none; }
 .dropdown-item:hover { background-color: #444; }
+
+/* Resaltado por teclado (Flecha Arriba/Abajo dentro del desplegable abierto),
+   independiente del color propio de "seleccionado" de cada panel: un marco
+   blanco por dentro que se ve sobre cualquier fondo. Enter confirma el ítem
+   resaltado. */
+.dropdown-item.kbd-highlight {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
 
 #fig-options-panel .dropdown-search:focus { border: 1px solid #004400; }
 #fig-options-panel .dropdown-item.selected { background-color: #003300; color: #ffffff; font-weight: bold; }
@@ -412,18 +430,18 @@ body, html {
     flex-shrink: 0;
 }
 
-/* Botón redondo de "Reiniciar Todos los Filtros" (misma acción que la tecla F),
-   con el mismo look que el ↺ verde de la izquierda del desplegable de Figuras,
-   pero suelto (redondeado en todas las esquinas) para la barra de controles. */
+/* Botón redondo de "Reiniciar Todos los Filtros" (misma acción que la tecla F):
+   directamente el emoji 🌈 (mismo símbolo que se usa en el resto de la app
+   para "Cualquiera"/"todo sin filtrar"), sobre un fondo simple. */
 .controls-reset-btn {
     width: 24px;
     height: 24px;
     padding: 0;
-    background-color: #000000;
-    border: 1px solid #333333;
+    background: none;
+    border: none;
     border-radius: 6px;
     color: white;
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -568,14 +586,40 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     min-width: 0;
 }
 
-.video-center {
+.video-center-wrapper {
     flex: 0 0 398px;
     width: 398px;
     height: 698px;
     position: relative;
+}
+
+.video-center {
+    width: 100%;
+    height: 100%;
+    position: relative;
     background: #000;
     overflow: hidden;
 }
+
+/* Flechitas < > para cambiar de Movimiento, ancladas más arriba en el video
+   (no en el medio, para no tapar la parte central de la toma), y no se
+   pierden al re-renderizar la grilla porque son hermanas de
+   #video-grid-wrapper, no hijas de él. Mismo estilo que el paginador de
+   arriba (.page-btn), un poco más grandes para que sean fáciles de tocar. */
+.video-nav-btn {
+    position: absolute;
+    top: 25%;
+    transform: translateY(-50%);
+    z-index: 20;
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+    opacity: 0.8;
+}
+.video-nav-btn:hover:not(:disabled) { opacity: 1; }
+.video-nav-btn:disabled { opacity: 0.2; cursor: default; filter: grayscale(1); }
+.video-nav-btn-left { left: 8px; }
+.video-nav-btn-right { right: 8px; }
 
 .video-grid {
     display: grid;
@@ -697,26 +741,41 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
 .info-badge-posini { background-color: rgba(0, 174, 255, 0.1); }
 .info-badge-posfin { background-color: rgba(0, 12, 240, 0.1); }
 
-/* Cartel opcional (toggle "T") con el número inicial y las 3 letras finales
-   del archivo de video correspondiente. Pegado del todo abajo del video
-   (separado del resto de los carteles, que están centrados). Fondo blanco
-   opaco, letra negra. */
-.titulo-bottom-overlay {
+/* Cartel opcional (toggle "T") con el código identificador del archivo de
+   video actual, partido en 2: el número al principio (ej. "001") separado
+   del borde izquierdo, y las 3 letras finales (ej. "RFN") separadas del
+   borde derecho, ambos a la misma altura que "Movimiento X / X" (arriba del
+   video, no abajo). Fondo blanco opaco, letra negra, mismo tamaño que
+   .movement-label por nivel de grilla para que se vean a la misma altura real. */
+.titulo-side-badge {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    z-index: 9;
-    pointer-events: none;
-}
-.info-badge-titulo {
+    top: 5px;
+    z-index: 10;
     background-color: rgba(255, 255, 255, 0.4);
     color: #000000;
-    border: none;
-    text-shadow: none;
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+    letter-spacing: 0.4px;
+    line-height: 1.2;
 }
+.titulo-side-left { left: 8%; }
+.titulo-side-right { right: 8%; }
+
+/* Tamaños y posiciones por versión de grilla, calcados de .movement-label
+   para quedar a la misma altura en cada tier. Más chico y más alejado de
+   los bordes (a mitad de camino entre el centro y el borde, vía left/right
+   en % arriba) que el resto de los carteles, y despegado del borde
+   superior los mismos 8px que separan a las flechitas &lt; &gt; de los
+   bordes laterales del video. */
+.grid-1x1 .titulo-side-badge { top: 5px; font-size: 13px; padding: 1px 7px; letter-spacing: 0.4px; }
+.grid-2x2 .titulo-side-badge { top: 5px; font-size: 8px; padding: 1px 5px; letter-spacing: 0.2px; }
+.grid-3x3 .titulo-side-badge { top: 5px; font-size: 5px; padding: 0px 3px; letter-spacing: 0.1px; }
+.grid-4x4 .titulo-side-badge { top: 5px; font-size: 4px; padding: 0px 2px; letter-spacing: 0.1px; }
 
 /* Tamaños por versión de grilla, igual criterio que .movement-label pero
    con letra más chica y todavía más transparencia que antes. */
@@ -834,14 +893,22 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
         overflow: hidden;
     }
 
-    .video-center {
+    .video-center-wrapper {
         flex: 1 1 auto;
         width: 100%;
         height: 100%;
         max-width: 398px;
         max-height: 698px;
         margin: 0 auto;
+        position: relative;
     }
+
+    .video-center {
+        width: 100%;
+        height: 100%;
+    }
+
+    .video-nav-btn { width: 26px; height: 26px; font-size: 12px; }
 
     .video-side {
         display: none;
@@ -926,6 +993,10 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     .grid-2x2 .info-badge { font-size: 7px; padding: 1px 4px; }
     .grid-3x3 .info-badge { font-size: 5px; padding: 0px 3px; }
     .grid-4x4 .info-badge { font-size: 4px; padding: 0px 2px; }
+    .grid-1x1 .titulo-side-badge { top: 5px; font-size: 18px; padding: 2px 8px; }
+    .grid-2x2 .titulo-side-badge { top: 5px; font-size: 10px; padding: 1px 5px; }
+    .grid-3x3 .titulo-side-badge { top: 5px; font-size: 8px; padding: 0px 3px; }
+    .grid-4x4 .titulo-side-badge { top: 5px; font-size: 6px; padding: 0px 2px; }
 }
 
 /* ================= PULL TO RELOAD INDICATOR ================= */
@@ -956,4 +1027,90 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
 }
 #pull-indicator.pull-spinning .pull-spinner {
     animation: spin 0.6s linear infinite;
+}
+
+/* ================= MODAL DE ATAJOS DE TECLADO ================= */
+#hotkeys-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 500;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+#hotkeys-modal {
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
+}
+
+#hotkeys-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #333;
+    font-weight: bold;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+#hotkeys-modal-close {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+}
+#hotkeys-modal-close:hover { color: #ff8f00; }
+
+#hotkeys-modal-body {
+    padding: 6px 16px 16px;
+    overflow-y: auto;
+}
+
+.hotkey-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid #2a2a2a;
+}
+.hotkey-row:last-child { border-bottom: none; }
+
+.hotkey-keys {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    min-width: 92px;
+}
+
+.hotkey-key {
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 3px 7px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffcc00;
+    white-space: nowrap;
+}
+
+.hotkey-desc {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: #ddd;
+    line-height: 1.3;
 }

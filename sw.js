@@ -4,7 +4,7 @@
 // página, con reintentos y resume — así una descarga larga que se corta (batería,
 // pantalla apagada, se cierra la pestaña) puede retomarse en vez de perderse toda.
 
-const CACHE_VERSION = 'glosario-bachatero-v8'; // subí este número cuando quieras forzar un recache del shell
+const CACHE_VERSION = 'glosario-bachatero-v10'; // subí este número cuando quieras forzar un recache del shell
 const APP_SHELL = [
   './',
   './index.html',

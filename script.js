@@ -421,6 +421,15 @@ function compararCombos(a, b) {
         || (a.posFin || '').localeCompare(b.posFin || '');
 }
 
+// Pone el contenido de un "-selected" (fig/ver/posini/posfin/song) SIEMPRE
+// envuelto en un span propio (.dropdown-label-text). Así el texto se recorta
+// con "..." dentro de ese span (que tiene su propio min-width:0) en vez de
+// empujar o tapar la flechita del desplegable (background-image del padre),
+// que queda siempre limpia sin importar cuán largo sea el texto.
+function setDropdownSelectedHTML(elId, innerHtml) {
+    document.getElementById(elId).innerHTML = `<span class="dropdown-label-text">${innerHtml}</span>`;
+}
+
 // Actualiza el texto de los 3 desplegables. Si una dimensión no tiene filtro propio
 // pero todos los combos candidatos comparten el mismo valor, se muestra igual
 // (autocompletado visual); si no, se muestra el placeholder de "sin elegir".
@@ -431,7 +440,6 @@ function actualizarEtiquetasFiltros(candidatos) {
         return set.size === 1 ? [...set][0] : null;
     };
 
-    const figEl = document.getElementById('fig-selected');
     // El label de Figura sólo muestra un nombre si el usuario lo eligió
     // explícitamente (filterFigura !== null). Antes se "autocompletaba" con
     // valorUnico('figura') cuando, al filtrar por Posición Inicial/Final,
@@ -440,20 +448,18 @@ function actualizarEtiquetasFiltros(candidatos) {
     // el usuario la elija a propósito. filterFigura === "" es una selección
     // real y explícita (las figuras "sin nombre"), se muestra como "---".
     if (filterFigura === null) {
-        figEl.innerHTML = `💃 Cualquier Figura [🌈]`;
+        setDropdownSelectedHTML('fig-selected', `💃 Cualquier Figura [🌈]`);
     } else {
-        figEl.innerHTML = `💃 ${filterFigura === '' ? '---' : filterFigura}`;
+        setDropdownSelectedHTML('fig-selected', `💃 ${filterFigura === '' ? '---' : filterFigura}`);
     }
 
-    const posIniEl = document.getElementById('posini-selected');
-    posIniEl.innerHTML = (filterPosIni === null)
+    setDropdownSelectedHTML('posini-selected', (filterPosIni === null)
         ? `<span class="pos-dot pos-dot-ini"></span>Cualquier Posición Inicial [🌈]`
-        : `<span class="pos-dot pos-dot-ini"></span>${filterPosIni === '' ? '---' : filterPosIni}`;
+        : `<span class="pos-dot pos-dot-ini"></span>${filterPosIni === '' ? '---' : filterPosIni}`);
 
-    const posFinEl = document.getElementById('posfin-selected');
-    posFinEl.innerHTML = (filterPosFin === null)
+    setDropdownSelectedHTML('posfin-selected', (filterPosFin === null)
         ? `<span class="pos-dot pos-dot-fin"></span>Cualquier Posición Final [🌈]`
-        : `<span class="pos-dot pos-dot-fin"></span>${filterPosFin === '' ? '---' : filterPosFin}`;
+        : `<span class="pos-dot pos-dot-fin"></span>${filterPosFin === '' ? '---' : filterPosFin}`);
 }
 
 // Carga figuras-manifest.json (generado con generar-manifest.html) y arranca la app.
@@ -556,6 +562,8 @@ const prevPageBtn = document.getElementById('prev-page-btn');
 const nextPageBtn = document.getElementById('next-page-btn');
 const pageIndicator = document.getElementById('page-indicator');
 const videoGridWrapper = document.getElementById('video-grid-wrapper');
+const videoPrevBtn = document.getElementById('video-prev-btn');
+const videoNextBtn = document.getElementById('video-next-btn');
 
 function safeUrl(path) { return encodeURI(path); }
 
@@ -607,7 +615,7 @@ function forzarPrimeraCancionYReiniciar() {
     if (!primera) return;
     currentSongValue = primera.file;
     localStorage.setItem('lastSong', currentSongValue);
-    document.getElementById('song-selected').innerText = `🎧 ${primera.name} [${primera.bpm} BPM]`;
+    setDropdownSelectedHTML('song-selected', `🎧 ${primera.name} [${primera.bpm} BPM]`);
     const sortActive = document.getElementById('sort-abc').classList.contains('active') ? 'abc' : 'bpm';
     renderSongList(document.getElementById('song-search').value, sortActive);
     prepararFuentes();
@@ -657,7 +665,7 @@ function renderGrid() {
 
         const label = document.createElement('div');
         label.className = 'movement-label';
-        label.innerText = `Movimiento ${numeroMovimiento}`;
+        label.innerText = `Movimiento ${numeroMovimiento}/${pasosActuales.length}`;
         cell.appendChild(label);
 
         // ===== OVERLAY CENTRAL: Figura / Posición Inicial / Posición Final =====
@@ -693,18 +701,21 @@ function renderGrid() {
 
         cell.appendChild(centerOverlay);
 
-        // Cartel opcional (toggle "T"): número inicial - 3 letras finales
-        // del archivo de video actual, pegado abajo de todo en el video.
+        // Cartel opcional (toggle "T"): el código identificador del archivo de
+        // video actual, partido en 2 y a la misma altura que "Movimiento X/X"
+        // (arriba del video): el número a la izquierda, las 3 letras a la derecha.
         if (mostrarTitulo) {
             const infoArchivo = extraerInfoArchivo(item.file8t);
             if (infoArchivo) {
-                const tituloOverlay = document.createElement('div');
-                tituloOverlay.className = 'titulo-bottom-overlay';
-                const tituloBadge = document.createElement('div');
-                tituloBadge.className = 'info-badge info-badge-titulo';
-                tituloBadge.innerText = `${infoArchivo.numero} - ${infoArchivo.letras}`;
-                tituloOverlay.appendChild(tituloBadge);
-                cell.appendChild(tituloOverlay);
+                const badgeNumero = document.createElement('div');
+                badgeNumero.className = 'titulo-side-badge titulo-side-left';
+                badgeNumero.innerText = infoArchivo.numero;
+                cell.appendChild(badgeNumero);
+
+                const badgeLetras = document.createElement('div');
+                badgeLetras.className = 'titulo-side-badge titulo-side-right';
+                badgeLetras.innerText = infoArchivo.letras;
+                cell.appendChild(badgeLetras);
             }
         }
 
@@ -790,8 +801,9 @@ function renderFigureList(searchTerm = "") {
         valorSet.add(c.figura);
         componentesDeFigura(c.figura).forEach(p => valorSet.add(p));
     });
+    const terminoNormalizado = normalizarTexto(searchTerm).trim();
     const valores = [...valorSet]
-        .filter(f => etiquetaFigura(f).toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(f => normalizarTexto(etiquetaFigura(f)).includes(terminoNormalizado))
         .sort((a, b) => etiquetaFigura(a).localeCompare(etiquetaFigura(b)));
 
     // El ítem "Cualquier Figura" usa data-any="1" (en vez de data-value="")
@@ -821,8 +833,9 @@ function renderPosIniList(searchTerm = "") {
     const listEl = document.getElementById('posini-list');
     const candidatos = combosFiltrados('posIni');
     const etiquetaPos = (p) => (p === '' ? '---' : p);
+    const terminoNormalizadoIni = normalizarTexto(searchTerm).trim();
     const valores = [...new Set(candidatos.map(c => c.posIni).filter(v => typeof v === 'string'))]
-        .filter(p => etiquetaPos(p).toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(p => normalizarTexto(etiquetaPos(p)).includes(terminoNormalizadoIni))
         .sort((a, b) => etiquetaPos(a).localeCompare(etiquetaPos(b)));
 
     // "Cualquier Posición Inicial" usa data-any="1" (en vez de data-value="")
@@ -850,8 +863,9 @@ function renderPosFinList(searchTerm = "") {
     const listEl = document.getElementById('posfin-list');
     const candidatos = combosFiltrados('posFin');
     const etiquetaPos = (p) => (p === '' ? '---' : p);
+    const terminoNormalizadoFin = normalizarTexto(searchTerm).trim();
     const valores = [...new Set(candidatos.map(c => c.posFin).filter(v => typeof v === 'string'))]
-        .filter(p => etiquetaPos(p).toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(p => normalizarTexto(etiquetaPos(p)).includes(terminoNormalizadoFin))
         .sort((a, b) => etiquetaPos(a).localeCompare(etiquetaPos(b)));
 
     let html = `<div class="dropdown-item ${filterPosFin === null ? 'selected' : ''}" data-any="1"><span class="pos-dot pos-dot-fin"></span>Cualquier Posición Final [🌈]</div>`;
@@ -911,7 +925,7 @@ function renderSongList(searchTerm = "", sortType = "abc") {
         item.onclick = () => {
             currentSongValue = item.dataset.value;
             localStorage.setItem('lastSong', currentSongValue);
-            document.getElementById('song-selected').innerText = item.innerText;
+            setDropdownSelectedHTML('song-selected', item.innerHTML);
             closeAllDropdowns();
             if (isPlaying || !isFirstAction) mutearParaCarga();
             audioPlayer.pause();
@@ -957,6 +971,14 @@ function closeAllDropdowns() {
     document.getElementById('posini-options-panel').style.display = 'none';
     document.getElementById('posfin-options-panel').style.display = 'none';
     document.getElementById('menu-options-panel').style.display = 'none';
+
+    // Al cerrarse (desclickeado) cualquiera de los desplegables con buscador,
+    // se borra lo que había escrito ahí, para que la próxima vez que se abra
+    // arranque limpio en vez de seguir filtrado por la búsqueda anterior.
+    ['fig-search', 'posini-search', 'posfin-search', 'song-search'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = '';
+    });
 }
 
 // Si el panel pasado ya estaba abierto, clickear su mismo botón lo cierra
@@ -969,6 +991,62 @@ function toggleDropdown(panelId, openFn) {
         panel.style.display = 'flex';
         if (openFn) openFn();
     }
+}
+
+// ===== NAVEGACIÓN POR TECLADO DENTRO DE UN DESPLEGABLE ABIERTO =====
+// Mapa panel -> lista, para saber cuál está abierto y sobre qué lista mover
+// el resaltado con Flecha Arriba / Flecha Abajo, y confirmar con Enter.
+const DROPDOWN_PANEL_TO_LIST = {
+    'fig-options-panel': 'fig-list',
+    'posini-options-panel': 'posini-list',
+    'posfin-options-panel': 'posfin-list',
+    'ver-options-panel': 'ver-list',
+    'song-options-panel': 'song-list',
+};
+
+// Devuelve {panelId, listId} del desplegable de filtro/canción que esté
+// abierto en este momento, o null si ninguno lo está.
+function getOpenDropdown() {
+    for (const panelId in DROPDOWN_PANEL_TO_LIST) {
+        const panel = document.getElementById(panelId);
+        if (panel && panel.style.display === 'flex') {
+            return { panelId, listId: DROPDOWN_PANEL_TO_LIST[panelId] };
+        }
+    }
+    return null;
+}
+
+// Mueve el resaltado (sin todavía aplicar el filtro) un paso hacia arriba o
+// abajo dentro de la lista indicada. Si no había nada resaltado, arranca
+// desde el ítem ya "seleccionado" (el filtro activo) para que la primera
+// flecha mueva hacia un lado coherente en vez de saltar a un extremo.
+function navigateDropdownHighlight(listId, direccion) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    const items = Array.from(list.querySelectorAll('.dropdown-item'));
+    if (items.length === 0) return;
+
+    let idx = items.findIndex(it => it.classList.contains('kbd-highlight'));
+    if (idx === -1) {
+        const idxSeleccionado = items.findIndex(it => it.classList.contains('selected'));
+        idx = idxSeleccionado !== -1 ? idxSeleccionado : (direccion > 0 ? -1 : 0);
+    }
+    items.forEach(it => it.classList.remove('kbd-highlight'));
+
+    idx += direccion;
+    if (idx < 0) idx = items.length - 1;
+    if (idx >= items.length) idx = 0;
+
+    items[idx].classList.add('kbd-highlight');
+    items[idx].scrollIntoView({ block: 'nearest' });
+}
+
+// Enter: confirma (clickea) el ítem resaltado por teclado, si hay alguno.
+function confirmDropdownHighlight(listId) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    const resaltado = list.querySelector('.dropdown-item.kbd-highlight');
+    if (resaltado) resaltado.click();
 }
 
 document.getElementById('posini-selected').onclick = (e) => {
@@ -1218,7 +1296,7 @@ function cambiarCancion(direccion) {
         audioPlayer.pause();
         currentSongValue = sortedSongs[newIndex].file;
         localStorage.setItem('lastSong', currentSongValue);
-        document.getElementById('song-selected').innerText = `🎧 ${sortedSongs[newIndex].name} [${sortedSongs[newIndex].bpm} BPM]`;
+        setDropdownSelectedHTML('song-selected', `🎧 ${sortedSongs[newIndex].name} [${sortedSongs[newIndex].bpm} BPM]`);
         prepararFuentes();
         if (isPlaying) {
             reiniciarDesdeCero(true);
@@ -1249,7 +1327,7 @@ function setupSelects() {
             currentSongValue = canciones[0].file;
         }
         const songObj = canciones.find(c => c.file === currentSongValue);
-        document.getElementById('song-selected').innerText = `🎧 ${songObj.name} [${songObj.bpm} BPM]`;
+        setDropdownSelectedHTML('song-selected', `🎧 ${songObj.name} [${songObj.bpm} BPM]`);
     }
 
     renderFigureList();
@@ -1295,10 +1373,9 @@ function cargarDificultad() {
 // muestra solo el arcoiris, siempre igual, sin importar qué Dificultad se
 // esté reproduciendo en cada paso (para que no cambie de cartel al navegar).
 function actualizarEtiquetaDificultad() {
-    const el = document.getElementById('ver-selected');
-    el.innerText = filterDificultad !== null
+    setDropdownSelectedHTML('ver-selected', filterDificultad !== null
         ? currentDificultadValue
-        : `🌈`;
+        : `🌈`);
 }
 
 // Arma la lista plana de TODAS las tomas (combinación + dificultad + variante)
@@ -1358,6 +1435,10 @@ function actualizarPaginacion() {
     if (pageTotalEl) pageTotalEl.innerText = total;
     prevPageBtn.disabled = (idx <= 0);
     nextPageBtn.disabled = (idx >= total - 1);
+    // Mismo estado que el paginador de arriba, para las flechitas < > que
+    // están ancladas al centro vertical del video.
+    if (videoPrevBtn) videoPrevBtn.disabled = prevPageBtn.disabled;
+    if (videoNextBtn) videoNextBtn.disabled = nextPageBtn.disabled;
 }
 
 // Salta directamente al Movimiento N (1-based) tecleado en el indicador,
@@ -1462,6 +1543,9 @@ function aplicarCambioVisual() {
 prevPageBtn.onclick = () => moverCombo(-1);
 
 nextPageBtn.onclick = () => moverCombo(1);
+
+if (videoPrevBtn) videoPrevBtn.onclick = () => moverCombo(-1);
+if (videoNextBtn) videoNextBtn.onclick = () => moverCombo(1);
 
 // ===== INPUT DE MOVIMIENTO (escribir un número para ir directo ahí) =====
 (function () {
@@ -1751,6 +1835,56 @@ document.getElementById('menu-title-toggle-item').onclick = () => {
     closeAllDropdowns();
 };
 
+// ===== MODAL: TODOS LOS ATAJOS DE TECLADO CARGADOS =====
+// Lista a mano, en el mismo orden en que aparecen los "case" del switch de
+// abajo, para que quede documentado cada atajo que la app realmente escucha.
+const HOTKEYS_INFO = [
+    { keys: ['Espacio'], desc: 'Reproducir / Pausar' },
+    { keys: ['S'], desc: 'Cambiar el orden de canciones (A-Z / BPM)' },
+    { keys: ['R'], desc: 'Reiniciar el movimiento actual desde el principio' },
+    { keys: ['M'], desc: 'Silenciar / Activar el sonido' },
+    { keys: ['T'], desc: 'Mostrar u ocultar el código identificador' },
+    { keys: ['+'], desc: 'Aumentar la velocidad' },
+    { keys: ['-'], desc: 'Disminuir la velocidad' },
+    { keys: ['A'], desc: 'Canción anterior' },
+    { keys: ['D'], desc: 'Canción siguiente' },
+    { keys: ['1', '2', '3', '4', '5'], desc: 'Ir directo a esa Dificultad (D1 a D5)' },
+    { keys: ['0', '|'], desc: 'Dificultad en "Cualquiera"' },
+    { keys: ['← Flecha Izq'], desc: 'Movimiento anterior' },
+    { keys: ['→ Flecha Der'], desc: 'Movimiento siguiente' },
+    { keys: ['↑ Flecha Arr', 'Q'], desc: 'Retroceder un valor en la última dimensión tocada (Figura, Posición Inicial, Posición Final o Dificultad)' },
+    { keys: ['↓ Flecha Abj', 'E'], desc: 'Avanzar un valor en esa misma dimensión' },
+    { keys: ['W'], desc: 'Poner en "Cualquiera" sólo la dimensión tocada por última vez' },
+    { keys: ['F'], desc: 'Reiniciar TODOS los filtros (Figura, Dificultad, Posición Inicial y Final)' },
+];
+
+function renderHotkeysModal() {
+    const body = document.getElementById('hotkeys-modal-body');
+    if (!body) return;
+    body.innerHTML = HOTKEYS_INFO.map(h => `
+        <div class="hotkey-row">
+            <div class="hotkey-keys">${h.keys.map(k => `<span class="hotkey-key">${k}</span>`).join('')}</div>
+            <div class="hotkey-desc">${h.desc}</div>
+        </div>
+    `).join('');
+}
+
+const hotkeysModalOverlay = document.getElementById('hotkeys-modal-overlay');
+document.getElementById('menu-hotkeys-item').onclick = () => {
+    renderHotkeysModal();
+    if (hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'flex';
+    closeAllDropdowns();
+};
+document.getElementById('hotkeys-modal-close').onclick = () => {
+    if (hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'none';
+};
+if (hotkeysModalOverlay) {
+    hotkeysModalOverlay.onclick = (e) => {
+        if (e.target === hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'none';
+    };
+}
+document.getElementById('hotkeys-modal').onclick = e => e.stopPropagation();
+
 rateInput.oninput = actualizarVelocidades;
 rateInput.onchange = () => {
     let val = parseFloat(rateInput.value);
@@ -1800,17 +1934,43 @@ document.addEventListener('visibilitychange', () => {
 
 // ===== ATAJOS DE TECLADO =====
 document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+
+    // Con el modal de "Atajos de teclado" abierto, sólo Escape hace algo
+    // (cerrarlo) — así evitamos disparar Espacio/flechas/etc. sin querer
+    // mientras se está leyendo la lista.
+    const hotkeysModal = document.getElementById('hotkeys-modal-overlay');
+    if (hotkeysModal && hotkeysModal.style.display === 'flex') {
+        if (key === 'escape') { e.preventDefault(); hotkeysModal.style.display = 'none'; }
+        return;
+    }
+
+    // Con alguno de los desplegables (Figura, Dificultad, Posición Inicial,
+    // Posición Final o Canción) abierto, Flecha Arriba/Abajo sólo mueven un
+    // resaltado visual dentro de esa lista (sin aplicar nada todavía), Enter
+    // confirma el ítem resaltado, y Escape cierra el desplegable. Esto tiene
+    // prioridad incluso con el foco puesto en el buscador de texto.
+    const openDropdown = getOpenDropdown();
+    if (openDropdown && (key === 'arrowup' || key === 'arrowdown' || key === 'enter' || key === 'escape')) {
+        e.preventDefault();
+        if (key === 'arrowup') navigateDropdownHighlight(openDropdown.listId, -1);
+        else if (key === 'arrowdown') navigateDropdownHighlight(openDropdown.listId, 1);
+        else if (key === 'enter') confirmDropdownHighlight(openDropdown.listId);
+        else if (key === 'escape') closeAllDropdowns();
+        return;
+    }
+
     const isRateInput = e.target.id === 'rate-input';
     const isOtherInput = e.target.tagName.toLowerCase() === 'input' && !isRateInput;
     if (isOtherInput) return;
 
     const hotkeys = [' ', 's', 'r', 'm', 't', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
-    if (isRateInput && hotkeys.includes(e.key.toLowerCase())) {
+    if (isRateInput && hotkeys.includes(key)) {
         e.preventDefault();
         e.target.blur();
     }
 
-    switch(e.key.toLowerCase()) {
+    switch(key) {
         case ' ':
             e.preventDefault();
             playBtn.click();
