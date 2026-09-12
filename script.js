@@ -159,7 +159,11 @@ if ('serviceWorker' in navigator) {
                 } else {
                     textEl.textContent = 'Descarga offline completa';
                 }
-                setTimeout(() => { banner.style.display = 'none'; }, 7000);
+                // Al terminar la descarga manual (pedida por el usuario tocando
+                // "Descargar" en el menú), esperamos a que se vea el cartel de
+                // "Listo" y recargamos la página — así queda todo recién
+                // servido desde el cache que se acaba de completar.
+                setTimeout(() => { location.reload(); }, 7000);
             } else {
                 banner.style.display = 'none';
             }
