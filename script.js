@@ -3166,12 +3166,16 @@ playBtn.onclick = () => {
 function actualizarUI(reproduciendo) {
     if (reproduciendo) {
         playBtn.className = "btn-red";
+        playBtn.title = "Detener (Espacio)";
         playIcon.innerHTML = "■";
         playIcon.className = "icon-stop";
+        playIcon.title = "Detener (Espacio)";
     } else {
         playBtn.className = isFirstAction ? "btn-yellow" : "btn-green";
+        playBtn.title = "Reproducir (Espacio)";
         playIcon.innerHTML = "▶";
         playIcon.className = "icon-play";
+        playIcon.title = "Reproducir (Espacio)";
     }
 }
 

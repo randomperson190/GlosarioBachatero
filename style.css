@@ -580,7 +580,7 @@ body, html {
 .fav-mini-btn:disabled { opacity: 0.35; cursor: default; }
 .fav-mini-btn:disabled:hover { filter: none; border-color: #555; color: #ccc; }
 
-.fav-star-btn { flex-shrink: 0; color: #ff8f00; border-color: #555555; font-size: 14px; position: relative; }
+.fav-star-btn { flex-shrink: 0; color: #ff8f00; background-color: #1a1a1a; border-color: #3a3a3a; font-size: 14px; position: relative; }
 .fav-star-btn:active:not(:disabled) { filter: brightness(1.6); }
 /* Ya guardada en la lista activa: fondo/borde resaltados (mismo amarillo
    que usa el 📝 cuando el movimiento actual ya tiene una nota, para que
@@ -603,10 +603,11 @@ body, html {
 }
 
 /* Botón 🙈 (al lado del ⭐): oculta/muestra el movimiento actual de toda la
-   navegación normal (paginación, flechas, grilla). Mismo look que el ⭐,
-   pero en gris (neutro) y resaltado en rojo cuando el movimiento actual
-   YA está oculto (un nuevo click lo restablece). */
-.hide-star-btn { flex-shrink: 0; color: #bbbbbb; border-color: #555555; font-size: 14px; }
+   navegación normal (paginación, flechas, grilla). Mismo look que el ⭐
+   (caja con fondo y borde propios, distintos de los de #rate-minus/
+   #rate-plus), pero en gris (neutro) y resaltado en rojo cuando el
+   movimiento actual YA está oculto (un nuevo click lo restablece). */
+.hide-star-btn { flex-shrink: 0; color: #bbbbbb; background-color: #1a1a1a; border-color: #3a3a3a; font-size: 14px; }
 .hide-star-btn:active:not(:disabled) { filter: brightness(1.6); }
 .hide-star-btn.active { background-color: #5a0c0c; border-color: #ff5252; color: #ff8a80; }
 
@@ -777,6 +778,15 @@ body, html {
     border-radius: 8px;
     padding: 4px 10px;
     gap: 8px;
+}
+
+/* Barra divisora vertical entre los botones principales del reproductor
+   (▶/■, 🔄, 🌈), para separarlos visualmente entre sí. */
+.control-divider {
+    width: 1px;
+    height: 20px;
+    background-color: #444444;
+    flex-shrink: 0;
 }
 
 #play-btn {

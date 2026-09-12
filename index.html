@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=89">
+    <link rel="stylesheet" href="style.css?v=90">
 </head>
 <body>
 
@@ -113,19 +113,22 @@
 
         <div class="controls-box">
             <button id="play-btn" class="btn-yellow" title="Reproducir (Espacio)">
-                <span id="play-icon" class="icon-play">▶</span>
+                <span id="play-icon" class="icon-play" title="Reproducir (Espacio)">▶</span>
             </button>
+            <span class="control-divider"></span>
             <button id="refresh-btn" class="action-btn" title="Reiniciar (R)">🔄</button>
+            <span class="control-divider"></span>
             <button id="controls-reset-btn" class="controls-reset-btn" title="Reiniciar Todos los Filtros (F)">🌈</button>
+            <span class="control-divider"></span>
             <button id="mute-btn" class="action-btn" title="Silenciar (M)">🔊</button>
             <div class="slow-container">
                 <div class="rate-wrapper">
-                    <span class="rate-btn" id="rate-minus">-</span>
+                    <span class="rate-btn" id="rate-minus" title="Bajar la velocidad (-)">-</span>
                     <span class="rate-input-box">
                         <span class="rate-prefix">x</span>
                         <input type="number" id="rate-input" value="1.00" step="0.01" min="0.01" max="3.00" title="Velocidad (+ / -)">
                     </span>
-                    <span class="rate-btn" id="rate-plus">+</span>
+                    <span class="rate-btn" id="rate-plus" title="Subir la velocidad (+)">+</span>
                 </div>
                 <span id="calc-bpm-label">--- BPM</span>
             </div>
@@ -151,11 +154,11 @@
                     <div class="menu-item" id="menu-hotkeys-item">
                         <span class="menu-item-label">⌨️ Ver atajos de teclado</span>
                     </div>
-                    <div class="menu-item" id="menu-export-item" title="Genera un texto copiable con tus favoritos, tus Figuras ocultas y tus notas, para guardarlo como respaldo">
-                        <span class="menu-item-label">⬆️ Exportar mis favoritos, ocultos y notas</span>
-                    </div>
                     <div class="menu-item" id="menu-import-item" title="Pegá un texto exportado antes para restaurar tus favoritos, tus Figuras ocultas y tus notas">
                         <span class="menu-item-label">⬇️ Importar mis favoritos, ocultos y notas</span>
+                    </div>
+                    <div class="menu-item" id="menu-export-item" title="Genera un texto copiable con tus favoritos, tus Figuras ocultas y tus notas, para guardarlo como respaldo">
+                        <span class="menu-item-label">⬆️ Exportar mis favoritos, ocultos y notas</span>
                     </div>
                     <div class="menu-item" id="menu-clear-cache-item" title="Borra todo lo guardado (incluido el modo avión) y recarga la última versión">
                         <span class="menu-item-label">🧹 Borrar caché y actualizar</span>
@@ -204,6 +207,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=69"></script>
+    <script src="script.js?v=70"></script>
 </body>
 </html>
