@@ -577,6 +577,8 @@ body, html {
     transition: filter 0.15s;
 }
 .fav-mini-btn:hover { filter: brightness(1.4); border-color: #ff8f00; color: #ff8f00; }
+.fav-mini-btn:disabled { opacity: 0.35; cursor: default; }
+.fav-mini-btn:disabled:hover { filter: none; border-color: #555; color: #ccc; }
 
 .fav-star-btn { flex-shrink: 0; color: #ff8f00; border-color: #555555; font-size: 14px; position: relative; }
 .fav-star-btn:active:not(:disabled) { filter: brightness(1.6); }
@@ -626,6 +628,17 @@ body, html {
     background-color: #3a3a3a;
 }
 
+/* Ícono de la lupa, de la nota, de la estrella y de ocultar: mismo padding
+   horizontal acotado a 6px (en vez del 7px que traen por defecto de
+   .history-btn), para que los cuatro queden parejos entre sí. */
+#movsearch-btn,
+.note-btn,
+.fav-star-btn,
+.hide-star-btn {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
 /* Nota personal del movimiento actual, mostrada DENTRO del video mismo:
    centrada horizontalmente igual que el cartel de Posición Final (ver
    .figure-center-overlay / .info-badge-posfin), pero más abajo que él, sin
@@ -639,7 +652,7 @@ body, html {
     top: 67%;
     transform: translateX(-50%);
     z-index: 25;
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.18);
     color: #000000;
     font-size: 12px;
     font-weight: 600;
@@ -650,7 +663,7 @@ body, html {
     max-width: 80%;
     max-height: 20%;
     overflow-y: auto;
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
 }
 #figure-note-display.visible { display: block; }
 

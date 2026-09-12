@@ -649,6 +649,7 @@ async function iniciarApp() {
     actualizarEstadoBotonFavAdd();
     actualizarEstadoBotonHide();
     actualizarEstadoBotonNota();
+    actualizarEstadoBotonFavSaveFiltered();
     actualizarEtiquetaFigurasOcultas();
 }
 
@@ -1626,6 +1627,27 @@ function siguienteNombreListaDisponible() {
     return `Mi Lista ${n}`;
 }
 
+// ¿Ya existe una lista (activa o no) con ese nombre? Compara sin
+// mayúsculas/minúsculas y sin espacios sobrantes en las puntas, para no
+// permitir "Mi Lista" y "mi lista " como si fueran nombres distintos.
+// idAExcluir sirve para el caso de renombrar una lista contra sí misma.
+function nombreListaYaExiste(nombre, idAExcluir) {
+    const nombreNorm = nombre.trim().toLowerCase();
+    return getFavLists().some(l => l.id !== idAExcluir && l.name.trim().toLowerCase() === nombreNorm);
+}
+
+// ¿Este item (comboId+dificultad+variantIndex/letras) ya está guardado en
+// esta lista? Mismo criterio de comparación que usa el resto de la app
+// (favoritos/ocultos): por código de 3 letras cuando ambos lo tienen, si no
+// por variantIndex crudo.
+function itemYaEnLista(lista, item) {
+    return lista.items.some(it => {
+        if (it.comboId !== item.comboId || it.dificultad !== item.dificultad) return false;
+        if (it.letras && item.letras) return it.letras === item.letras;
+        return it.variantIndex === item.variantIndex;
+    });
+}
+
 function crearListaFavoritos(nombre) {
     const lists = getFavLists();
     const nueva = { id: generarFavListId(), name: nombre, items: [] };
@@ -1810,6 +1832,18 @@ function actualizarEstadoBotonFavAdd() {
     btn.title = yaGuardada
         ? 'Quitar la Figura actual de la lista seleccionada'
         : 'Agregar la Figura actual a la lista seleccionada';
+}
+
+// Botón 💾 (guardar los Movimientos del filtro actual en una lista):
+// deshabilitado cuando no hay ningún filtro activo (Figura, Posición
+// Inicial, Posición Final ni Dificultad), porque en ese caso "el filtro
+// actual" serían TODOS los Movimientos de la app — mismo chequeo que usa
+// resetearTodosLosFiltros para saber si hay algo para resetear.
+function actualizarEstadoBotonFavSaveFiltered() {
+    const btn = document.getElementById('fav-list-save-filtered-btn');
+    if (!btn) return;
+    const hayFiltroActivo = !(filterFigura === null && filterDificultad === null && filterPosIni === null && filterPosFin === null);
+    btn.disabled = !hayFiltroActivo;
 }
 
 // Refresca el texto mostrado del menú ("..." por defecto, para que el menú
@@ -2022,7 +2056,10 @@ document.getElementById('fav-list-options-panel').onclick = e => e.stopPropagati
 
 document.getElementById('fav-list-new-btn').onclick = (e) => {
     e.stopPropagation();
-    const nombre = prompt('Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+    let nombre = prompt('Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+    while (nombre !== null && nombre.trim() && nombreListaYaExiste(nombre, null)) {
+        nombre = prompt(`Ya existe una lista llamada "${nombre.trim()}". Elegí otro nombre:`, '');
+    }
     if (!nombre || !nombre.trim()) return;
     crearListaFavoritos(nombre.trim());
     actualizarEtiquetaFavLista();
@@ -2035,7 +2072,10 @@ document.getElementById('fav-list-rename-btn').onclick = (e) => {
     const lists = getFavLists();
     const activa = lists.find(l => l.id === favActiveListId);
     if (!activa) return;
-    const nuevoNombre = prompt('Nuevo nombre para esta lista:', activa.name);
+    let nuevoNombre = prompt('Nuevo nombre para esta lista:', activa.name);
+    while (nuevoNombre !== null && nuevoNombre.trim() && nombreListaYaExiste(nuevoNombre, activa.id)) {
+        nuevoNombre = prompt(`Ya existe otra lista llamada "${nuevoNombre.trim()}". Elegí otro nombre:`, '');
+    }
     if (!nuevoNombre || !nuevoNombre.trim()) return;
     activa.name = nuevoNombre.trim();
     guardarFavLists(lists);
@@ -2043,13 +2083,18 @@ document.getElementById('fav-list-rename-btn').onclick = (e) => {
     renderFavListDropdown();
 };
 
-// Botón 💾: crea una lista NUEVA con TODOS los Movimientos que cumplen el
-// filtro actualmente activo (Figura/Posición Inicial/Posición Final/
+// Botón 💾: guarda TODOS los Movimientos que cumplen el filtro actualmente
+// activo (Figura/Posición Inicial/Posición Final/
 // Dificultad/"=", respetando también las Figuras ocultas, salvo que
 // "Mostrar figuras ocultas" esté prendido — mismo criterio que
 // construirPasosFiltrados, que es lo que arma el contador "X/Y" de arriba).
 // Útil para guardar de un solo toque, por ejemplo, "todas las Figuras de
 // D3" o "todas las que terminan en una Posición puntual".
+// A diferencia de "+" (nueva lista) y "✎" (renombrar), acá SÍ se permite
+// escribir el nombre de una lista ya existente a propósito: en vez de
+// rechazarlo, se adhiere a esa lista tal cual (sin crear una nueva ni pedir
+// otro nombre), agregando únicamente los Movimientos del filtro actual que
+// todavía no estuvieran guardados ahí — nunca duplicando los que ya estaban.
 document.getElementById('fav-list-save-filtered-btn').onclick = (e) => {
     e.stopPropagation();
     const pasos = construirPasosFiltrados();
@@ -2057,17 +2102,28 @@ document.getElementById('fav-list-save-filtered-btn').onclick = (e) => {
         alert('No hay ningún Movimiento que cumpla el filtro actual para guardar.');
         return;
     }
-    const nombre = prompt(`Nombre de la nueva lista (se van a guardar los ${pasos.length} Movimientos que cumplen el filtro actual):`, siguienteNombreListaDisponible());
+    const nombre = prompt(`Nombre de la lista (se van a guardar los ${pasos.length} Movimientos que cumplen el filtro actual; si el nombre ya existe, se agregan a esa lista sin repetir los que ya estaban):`, siguienteNombreListaDisponible());
     if (!nombre || !nombre.trim()) return;
-    const nueva = crearListaFavoritos(nombre.trim());
-    const lists = getFavLists();
-    const lista = lists.find(l => l.id === nueva.id);
+    const nombreTrim = nombre.trim();
+
+    let lists = getFavLists();
+    const existente = lists.find(l => l.name.trim().toLowerCase() === nombreTrim.toLowerCase());
+    let listId;
+    if (existente) {
+        listId = existente.id;
+        setFavActiveListId(listId);
+    } else {
+        listId = crearListaFavoritos(nombreTrim).id;
+        lists = getFavLists();
+    }
+    const lista = lists.find(l => l.id === listId);
     if (lista) {
         pasos.forEach(p => {
             const combo = comboByKey[p.comboId];
             const toma = combo && combo.dificultades && combo.dificultades[p.dificultad] && combo.dificultades[p.dificultad][p.variantIndex];
             const info = toma ? extraerInfoArchivo(toma.file8t) : null;
-            lista.items.push({ comboId: p.comboId, dificultad: p.dificultad, variantIndex: p.variantIndex, letras: info ? info.letras : undefined });
+            const item = { comboId: p.comboId, dificultad: p.dificultad, variantIndex: p.variantIndex, letras: info ? info.letras : undefined };
+            if (!itemYaEnLista(lista, item)) lista.items.push(item);
         });
         guardarFavLists(lists);
     }
@@ -2094,7 +2150,10 @@ document.getElementById('fav-add-current-btn').onclick = (e) => {
     let lists = getFavLists();
     let activa = lists.find(l => l.id === favActiveListId);
     if (!activa) {
-        const nombre = prompt('No hay ninguna lista seleccionada. Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+        let nombre = prompt('No hay ninguna lista seleccionada. Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+        while (nombre !== null && nombre.trim() && nombreListaYaExiste(nombre, null)) {
+            nombre = prompt(`Ya existe una lista llamada "${nombre.trim()}". Elegí otro nombre:`, '');
+        }
         if (!nombre || !nombre.trim()) return;
         const nueva = crearListaFavoritos(nombre.trim());
         lists = getFavLists();
@@ -2863,6 +2922,7 @@ function aplicarCambioVisual() {
     actualizarEstadoBotonFavAdd();
     actualizarEstadoBotonHide();
     actualizarEstadoBotonNota();
+    actualizarEstadoBotonFavSaveFiltered();
 }
 
 prevPageBtn.onclick = () => moverCombo(-1);

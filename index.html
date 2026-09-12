@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=88">
+    <link rel="stylesheet" href="style.css?v=89">
 </head>
 <body>
 
@@ -93,14 +93,12 @@
                     <div class="fav-list-manage-row">
                         <button class="fav-mini-btn" id="fav-list-new-btn" title="Nueva lista de favoritos">+</button>
                         <button class="fav-mini-btn" id="fav-list-rename-btn" title="Renombrar la lista seleccionada">✎</button>
-                        <button class="fav-mini-btn" id="fav-list-save-filtered-btn" title="Guardar todos los Movimientos del filtro actual en una lista nueva">💾</button>
+                        <button class="fav-mini-btn" id="fav-list-save-filtered-btn" title="Guardar todos los Movimientos del filtro actual en una lista (nueva o existente)" disabled>💾</button>
                         <button class="fav-mini-btn" id="fav-list-delete-btn" title="Eliminar la lista seleccionada">🗑</button>
                     </div>
                     <div class="dropdown-list" id="fav-list-list"></div>
                 </div>
             </div>
-            <button class="history-btn fav-star-btn" id="fav-add-current-btn" title="Agregar la Figura actual a la lista seleccionada (B)">⭐</button>
-            <button class="history-btn hide-star-btn" id="fig-hide-current-btn" title="Ocultar el movimiento actual (O)">🙈</button>
             <button class="history-btn note-btn" id="fig-note-btn" title="Anotar una nota para el movimiento actual (N)">📝</button>
             <div class="movsearch-container" id="movsearch-container">
                 <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código (L)">🔍</button>
@@ -131,6 +129,8 @@
                 </div>
                 <span id="calc-bpm-label">--- BPM</span>
             </div>
+            <button class="history-btn fav-star-btn" id="fav-add-current-btn" title="Agregar la Figura actual a la lista seleccionada (B)">⭐</button>
+            <button class="history-btn hide-star-btn" id="fig-hide-current-btn" title="Ocultar el movimiento actual (O)">🙈</button>
             <div class="menu-container" id="menu-container">
                 <button id="menu-btn" class="menu-btn" title="Más opciones">☰</button>
                 <div class="menu-options" id="menu-options-panel">
@@ -204,6 +204,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=68"></script>
+    <script src="script.js?v=69"></script>
 </body>
 </html>
