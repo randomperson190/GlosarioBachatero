@@ -1098,9 +1098,14 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     color: #ffffff !important;
     text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.75);
 }
+/* Mismo efecto hover/active que .figura-circle y los carteles de
+   .figure-center-overlay (.info-badge): al pasar el mouse se resaltan
+   (opacity 1 + un poco más de brillo) y al tocarlos/clickearlos se
+   iluminan todavía más. */
 @media (hover: hover) {
-    .pos-swap-btn:hover { opacity: 1; }
+    .pos-swap-btn:hover { opacity: 1; filter: brightness(1.35); }
 }
+.pos-swap-btn:active { filter: brightness(1.6); }
 
 /* Círculos verdes clickeables: uno por cada "parte" de la Figura del video
    actual (una sola si es singular, varias si es compuesta "A + B", ver
