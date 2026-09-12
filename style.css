@@ -53,13 +53,13 @@ body, html {
 #figure-panel {
     flex: 0 0 auto;
     background: #111;
-    padding: 10px 10px 6px 10px;
+    padding: 5px 5px 5px 5px;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    border-bottom: 1px solid #222;
+    /* border-bottom: 1px solid #222; */
 }
 
 .dropdown-container {
@@ -328,24 +328,25 @@ body, html {
     flex: 0 0 auto;
     background: #111;
     border-bottom: 1px solid #333;
-    display: flex;
+    /* display: flex; */
     justify-content: center;
     align-items: center;
-    gap: 5px;
+    /* gap: 5px; */
     position: relative;
     z-index: 50;
+    padding: 0px 5px 5px 5px;
 }
 
 /* ================= POSITION PANEL ================= */
 #position-panel {
     flex: 0 0 auto;
     background: #111;
-    padding: 3px 10px;
+    padding: 0px 5px 5px 5px;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid #222;
+    gap: 6px;
+    /* border-bottom: 1px solid #222; */
 }
 
 #posini-dropdown-group { min-width: 0; flex: 1 1 0; }
@@ -434,9 +435,10 @@ body, html {
 .song-selector-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
     justify-content: center;
+    padding-bottom: 5px;
 }
 
 .sort-btn {
@@ -465,7 +467,7 @@ body, html {
 /* Botón lupa (🔍) para buscar Movimientos por su código de 3 letras (mismo
    que el cartel opcional del toggle "T"), a la izquierda de Deshacer. Mismo
    patrón que el menú ☰: botón + panel absoluto que se abre debajo. */
-.movsearch-container { position: relative; flex-shrink: 0; }
+.movsearch-container {position: relative;flex-shrink: 0;/* padding-top: 1px; *//* padding-bottom: 3px; *//* height: 34px; *//* font-size: 22px; */}
 
 .movsearch-options {
     display: none;
@@ -492,7 +494,7 @@ body, html {
     background: #333333;
     border: 1px solid #555555;
     color: #ffffff;
-    font-size: 13px;
+    font-size: 14px;
     padding: 4px 7px;
     border-radius: 4px;
     cursor: pointer;
@@ -1391,7 +1393,7 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     }
     #position-panel {
         padding: 2px 5px;
-        gap: 6px;
+        gap: 5px;
         flex-wrap: nowrap;
     }
     #posini-dropdown-container, #posfin-dropdown-container {
@@ -1405,14 +1407,14 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     .song-selector-group {
         flex-wrap: nowrap;
         width: 100%;
-        gap: 6px;
+        gap: 5px;
         justify-content: space-between;
     }
     .controls-box {
         flex-wrap: nowrap;
         width: 100%;
         justify-content: center;
-        gap: 10px;
+        gap: 5px;
         padding: 5px 10px;
     }
     .dropdown-container, #song-dropdown-container {

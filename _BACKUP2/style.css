@@ -577,8 +577,18 @@ body, html {
 .fav-star-btn { flex-shrink: 0; color: #ff8f00; border-color: #555555; font-size: 14px; }
 .fav-star-btn:hover:not(:disabled) { background-color: #4a3300; }
 .fav-star-btn:active:not(:disabled) { filter: brightness(1.6); }
-/* Ya guardada en la lista activa: deshabilitado, sin poder duplicarla. */
-.fav-star-btn:disabled { opacity: 0.35; cursor: default; }
+/* Ya guardada en la lista activa: fondo/borde resaltados, para dejar claro
+   que un nuevo click ahora la QUITA de la lista en vez de duplicarla. */
+.fav-star-btn.active { background-color: #4a3300; border-color: #ff8f00; }
+
+/* Botón 🙈 (al lado del ⭐): oculta/muestra el movimiento actual de toda la
+   navegación normal (paginación, flechas, grilla). Mismo look que el ⭐,
+   pero en gris (neutro) y resaltado en rojo cuando el movimiento actual
+   YA está oculto (un nuevo click lo restablece). */
+.hide-star-btn { flex-shrink: 0; color: #bbbbbb; border-color: #555555; font-size: 14px; }
+.hide-star-btn:hover:not(:disabled) { background-color: #3a3a3a; }
+.hide-star-btn:active:not(:disabled) { filter: brightness(1.6); }
+.hide-star-btn.active { background-color: #5a0c0c; border-color: #ff5252; color: #ff8a80; }
 
 /* Debajo de la lista seleccionada (la que tiene fondo naranja), sus Figuras
    guardadas se listan anidadas, con sangría, para que se note que "cuelgan"
@@ -890,6 +900,9 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     background: #000;
     position: relative;
     z-index: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .video-side {
@@ -1055,6 +1068,9 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     height: 100%;
     object-fit: cover;
     display: block;
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
 }
 
 .vid-hidden { opacity: 0; pointer-events: none; }

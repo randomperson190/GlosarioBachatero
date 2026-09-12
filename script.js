@@ -3095,9 +3095,10 @@ const HOTKEYS_INFO = [
     { keys: ['R'], desc: 'Reiniciar el movimiento actual desde el principio' },
     { keys: ['M'], desc: 'Silenciar / Activar el sonido' },
     { keys: ['T'], desc: 'Mostrar u ocultar el código identificador' },
-    { keys: ['B'], desc: 'Buscar un Movimiento por su código de 3 letras' },
+    { keys: ['B'], desc: 'Agregar la Figura actual a la lista de Favoritos seleccionada' },
     { keys: ['I'], desc: 'Activar/desactivar "=": mostrar sólo tomas con Posición Inicial y Final iguales' },
     { keys: ['O'], desc: 'Ocultar / Mostrar el movimiento actual' },
+    { keys: ['L'], desc: 'Buscar un Movimiento por su código de 3 letras' },
     { keys: ['+'], desc: 'Aumentar la velocidad' },
     { keys: ['-'], desc: 'Disminuir la velocidad' },
     { keys: ['A'], desc: 'Canción anterior' },
@@ -3234,7 +3235,7 @@ document.addEventListener('keydown', (e) => {
     const isOtherInput = e.target.tagName.toLowerCase() === 'input' && !isRateInput;
     if (isOtherInput) return;
 
-    const hotkeys = [' ', 's', 'r', 'm', 't', 'b', 'i', 'o', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
+    const hotkeys = [' ', 's', 'r', 'm', 't', 'b', 'l', 'i', 'o', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
     if (isRateInput && hotkeys.includes(key)) {
         e.preventDefault();
         e.target.blur();
@@ -3263,6 +3264,10 @@ document.addEventListener('keydown', (e) => {
             toggleMostrarTitulo();
             break;
         case 'b':
+            e.preventDefault();
+            document.getElementById('fav-add-current-btn').click();
+            break;
+        case 'l':
             e.preventDefault();
             document.getElementById('movsearch-btn').click();
             break;
