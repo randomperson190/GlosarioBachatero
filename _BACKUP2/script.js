@@ -596,6 +596,7 @@ async function iniciarApp() {
     setupSelects();
     renderGrid();
     prepararFuentes();
+    actualizarEstadoBotonFavAdd();
 }
 
 let canciones = [
@@ -1125,6 +1126,7 @@ function closeAllDropdowns() {
     document.getElementById('posfin-options-panel').style.display = 'none';
     document.getElementById('menu-options-panel').style.display = 'none';
     document.getElementById('movsearch-options-panel').style.display = 'none';
+    document.getElementById('fav-list-options-panel').style.display = 'none';
 
     // Al cerrarse (desclickeado) cualquiera de los desplegables con buscador,
     // se borra lo que había escrito ahí, para que la próxima vez que se abra
@@ -1157,6 +1159,7 @@ const DROPDOWN_PANEL_TO_LIST = {
     'ver-options-panel': 'ver-list',
     'song-options-panel': 'song-list',
     'movsearch-options-panel': 'movsearch-list',
+    'fav-list-options-panel': 'fav-list-list',
 };
 
 // Devuelve {panelId, listId} del desplegable de filtro/canción que esté
@@ -1516,6 +1519,469 @@ document.getElementById('movsearch-options-panel').onclick = e => e.stopPropagat
 document.getElementById('movsearch-search').addEventListener('input', (e) => {
     renderMovSearchList(e.target.value);
 });
+
+// ===== FAVORITOS (varias listas con nombre) =====
+// Cada lista es {id, name, items:[{comboId, dificultad, variantIndex}, ...]},
+// todo guardado junto en UNA cookie (JSON), más otra cookie chica con el id
+// de la lista "seleccionada" en el menú (a la que apunta el botón ⭐ suelto).
+let favActiveListId = getCookie('favActiveListId') || null;
+
+// Ids de listas mostradas expandidas (con sus Figuras visibles debajo).
+// Independiente de cuál es la lista "activa" (destino del botón ⭐ suelto):
+// una lista puede estar activa y colapsada, o expandida sin ser la activa.
+// La lista activa arranca siempre expandida por defecto al abrir la app.
+let favExpandedListIds = new Set(favActiveListId ? [favActiveListId] : []);
+
+function getFavLists() {
+    const raw = getCookie('favLists');
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+function guardarFavLists(lists) {
+    setCookie('favLists', JSON.stringify(lists));
+}
+function setFavActiveListId(id) {
+    favActiveListId = id;
+    setCookie('favActiveListId', id || '');
+    if (id) favExpandedListIds.add(id);
+}
+function generarFavListId() {
+    return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// Nombre sugerido para una lista nueva: "Mi Lista X", empezando en 1. Si ya
+// existe una lista con ese nombre (por ejemplo "Mi Lista 1" sigue existiendo)
+// prueba con el siguiente número, así nunca sugiere un nombre duplicado.
+function siguienteNombreListaDisponible() {
+    const nombresUsados = new Set(getFavLists().map(l => l.name));
+    let n = 1;
+    while (nombresUsados.has(`Mi Lista ${n}`)) n++;
+    return `Mi Lista ${n}`;
+}
+
+function crearListaFavoritos(nombre) {
+    const lists = getFavLists();
+    const nueva = { id: generarFavListId(), name: nombre, items: [] };
+    lists.push(nueva);
+    guardarFavLists(lists);
+    setFavActiveListId(nueva.id);
+    return nueva;
+}
+
+// Elimina una lista de favoritos por id (esté vacía o no, sea o no la
+// activa), pide confirmación, y si la borrada era la activa pasa a ser
+// activa la primera que quede (o ninguna si no queda ninguna). La usan
+// tanto el 🗑 de la fila de arriba (siempre sobre la lista activa) como la
+// "✕" de cada fila individual (sobre la lista que se haya tocado).
+function eliminarListaFavoritos(listId) {
+    const lists = getFavLists();
+    const lista = lists.find(l => l.id === listId);
+    if (!lista) return;
+    if (!confirm(`¿Eliminar la lista "${lista.name}" y sus ${lista.items.length} Figuras guardadas?`)) return;
+    const restantes = lists.filter(l => l.id !== listId);
+    favExpandedListIds.delete(listId);
+    guardarFavLists(restantes);
+    if (favActiveListId === listId) {
+        setFavActiveListId(restantes.length ? restantes[0].id : null);
+    }
+    actualizarEtiquetaFavLista();
+    actualizarEstadoBotonFavAdd();
+    renderFavListDropdown();
+}
+
+// Dentro de las tomas actuales de una Dificultad, busca el índice cuyo
+// código de 3 letras (ver extraerInfoArchivo) coincide con el buscado.
+// Null si ninguna toma actual tiene ese código.
+function indiceTomaPorLetras(tomas, letras) {
+    if (!letras) return null;
+    const idx = tomas.findIndex(t => {
+        const info = extraerInfoArchivo(t.file8t);
+        return info && info.letras === letras;
+    });
+    return idx === -1 ? null : idx;
+}
+
+// Resuelve la toma ACTUAL de una Figura guardada en una lista de favoritos.
+// El nombre del archivo de video puede cambiar (por ejemplo el número, si se
+// reordenan o agregan tomas nuevas), pero el código de 3 letras del final es
+// siempre el identificador real y estable de ESA toma puntual. Por eso, si
+// el favorito ya tiene "letras" guardado, se lo usa como fuente de verdad
+// para encontrar la toma correcta hoy, en vez de confiar en el variantIndex
+// crudo (que puede haber quedado apuntando a otra toma distinta tras un
+// cambio así). Los favoritos guardados antes de este cambio (todavía sin
+// "letras") se siguen resolviendo por variantIndex tal cual, como antes.
+// Devuelve {variantIndex, toma} o null si esa Figura ya no tiene ninguna
+// toma disponible en esa Dificultad.
+function resolverTomaFavorito(item) {
+    const combo = comboByKey[item.comboId];
+    if (!combo) return null;
+    const tomas = (combo.dificultades && combo.dificultades[item.dificultad]) || [];
+    if (tomas.length === 0) return null;
+    if (item.letras) {
+        const idx = indiceTomaPorLetras(tomas, item.letras);
+        return idx === null ? null : { variantIndex: idx, toma: tomas[idx] };
+    }
+    const toma = tomas[item.variantIndex] || null;
+    return toma ? { variantIndex: item.variantIndex, toma } : null;
+}
+
+// Etiqueta legible de una Figura guardada, con el orden fijo pedido:
+// "DX - Posición Inicial - Figura - Posición Final - Identificador de 3 letras".
+// Datos crudos de una Figura guardada, compartidos por la versión de texto
+// plano (usada en el title="" para el tooltip) y la versión coloreada
+// (usada en la pantalla).
+function datosEtiquetaFav(item) {
+    const combo = comboByKey[item.comboId];
+    if (!combo) return null;
+    const fig = combo.figura === '' ? '---' : combo.figura;
+    const ini = combo.posIni === '' ? '---' : combo.posIni;
+    const fin = combo.posFin === '' ? '---' : combo.posFin;
+    const resuelto = resolverTomaFavorito(item);
+    const info = resuelto ? extraerInfoArchivo(resuelto.toma.file8t) : null;
+    return { dif: item.dificultad, ini, fig, fin, letras: info ? info.letras : '---', numero: info ? info.numero : '' };
+}
+
+// Versión en texto plano (sin HTML), para el atributo title="" del tooltip.
+function etiquetaMovimientoFav(item) {
+    const d = datosEtiquetaFav(item);
+    if (!d) return '(Movimiento ya no disponible)';
+    const numTxt = d.numero ? ` - ${d.numero}` : '';
+    return `${d.dif} - ${d.ini} - ${d.fig} - ${d.fin} - ${d.letras}${numTxt}`;
+}
+
+// Versión coloreada (Dificultad violeta, Posición Inicial celeste, Posición
+// Final azul, Figura verde, código de letras naranja, código numérico
+// gris), para mostrar en pantalla dentro de la lista.
+function etiquetaMovimientoFavHTML(item) {
+    const d = datosEtiquetaFav(item);
+    if (!d) return '(Movimiento ya no disponible)';
+    const numHtml = d.numero ? ` - <span class="fav-item-num">${d.numero}</span>` : '';
+    return `<span class="fav-item-dif">${d.dif}</span> - <span class="fav-item-posini">${d.ini}</span> - <span class="fav-item-figura">${d.fig}</span> - <span class="fav-item-posfin">${d.fin}</span> - <span class="fav-item-letras">${d.letras}</span>${numHtml}`;
+}
+
+// Mueve una Figura dentro de su lista de favoritos, de fromIdx a toIdx
+// (usado tanto por el arrastre como por las flechitas ▲/▼).
+function moverItemFavLista(listId, fromIdx, toIdx) {
+    const lists = getFavLists();
+    const lista = lists.find(l => l.id === listId);
+    if (!lista) return;
+    if (toIdx < 0 || toIdx >= lista.items.length || fromIdx === toIdx) return;
+    const [item] = lista.items.splice(fromIdx, 1);
+    lista.items.splice(toIdx, 0, item);
+    guardarFavLists(lists);
+    renderFavListDropdown();
+}
+
+// Mueve una lista entera dentro del orden general de listas, de fromIdx a
+// toIdx (mismo mecanismo que moverItemFavLista, pero sobre el array de listas).
+function moverListaFav(fromIdx, toIdx) {
+    const lists = getFavLists();
+    if (toIdx < 0 || toIdx >= lists.length || fromIdx === toIdx) return;
+    const [lista] = lists.splice(fromIdx, 1);
+    lists.splice(toIdx, 0, lista);
+    guardarFavLists(lists);
+    renderFavListDropdown();
+}
+
+// Estado del arrastre en curso: de Figuras dentro de una lista, y de listas
+// enteras entre sí (son dos arrastres distintos, nunca simultáneos).
+let favDragState = null;
+let favListDragState = null;
+
+// Código de 3 letras (identificador estable, ver extraerInfoArchivo) de la
+// toma que se está mostrando ahora mismo, o null si no hay una toma válida.
+function letrasDeVarianteActual() {
+    const combo = comboByKey[currentFigureValue];
+    if (!combo) return null;
+    const tomas = (combo.dificultades && combo.dificultades[currentDificultadValue]) || [];
+    const toma = tomas[currentVariantIndex];
+    const info = toma ? extraerInfoArchivo(toma.file8t) : null;
+    return info ? info.letras : null;
+}
+
+// ¿La Figura que se está viendo ahora mismo ya está guardada en la lista
+// activa? Determina si el botón ⭐ suelto debe quedar deshabilitado. Se
+// compara por código de 3 letras (identificador real y estable de la toma)
+// cuando el favorito ya lo tiene guardado; si no (favoritos viejos todavía
+// sin migrar), se cae al variantIndex crudo como antes.
+function figuraActualYaEnListaActiva() {
+    if (!currentFigureValue || !comboByKey[currentFigureValue]) return false;
+    const activa = getFavLists().find(l => l.id === favActiveListId);
+    if (!activa) return false;
+    const letrasActual = letrasDeVarianteActual();
+    return activa.items.some(it => {
+        if (it.comboId !== currentFigureValue || it.dificultad !== currentDificultadValue) return false;
+        if (it.letras && letrasActual) return it.letras === letrasActual;
+        return it.variantIndex === currentVariantIndex;
+    });
+}
+function actualizarEstadoBotonFavAdd() {
+    const btn = document.getElementById('fav-add-current-btn');
+    if (!btn) return;
+    btn.disabled = figuraActualYaEnListaActiva();
+}
+
+// Refresca el texto mostrado del menú ("📋 Seleccionar lista" por defecto,
+// o el nombre + cantidad de la lista elegida), igual patrón que el resto
+// de los desplegables (fig/posini/posfin/song).
+function actualizarEtiquetaFavLista() {
+    const lists = getFavLists();
+    const activa = lists.find(l => l.id === favActiveListId);
+    setDropdownSelectedHTML('fav-list-selected', activa
+        ? `📋 ${activa.name} - [${activa.items.length}]`
+        : '📋 Seleccionar lista');
+}
+
+// Panel del menú: arriba la fila +/✎/🗑 (actúan sobre la lista elegida),
+// abajo TODAS las listas (reordenables por arrastre o con ▲/▼, y borrables
+// directamente con su propia "✕", esté vacía o no); cada una se puede
+// expandir/colapsar con el triángulo ▸/▾ para ver, debajo, sus Figuras
+// guardadas (a su vez reordenables), saltar directo a una o quitarla con
+// su propia "✕".
+function renderFavListDropdown() {
+    const listEl = document.getElementById('fav-list-list');
+    const lists = getFavLists();
+    if (lists.length === 0) {
+        listEl.innerHTML = '<div class="dropdown-item" style="cursor:default;opacity:0.6;">Sin listas todavía — creá una con "+"</div>';
+        return;
+    }
+    // Migración silenciosa: a las Figuras guardadas ANTES de este cambio (sin
+    // "letras" todavía) se les completa el código de 3 letras la primera vez
+    // que se puede resolver por su variantIndex actual, y se persiste, para
+    // que de ahí en más queden identificadas por ese código estable en vez
+    // del variantIndex crudo (ver resolverTomaFavorito).
+    let huboMigracion = false;
+    lists.forEach(l => {
+        l.items.forEach(it => {
+            if (it.letras) return;
+            const resuelto = resolverTomaFavorito(it);
+            const info = resuelto ? extraerInfoArchivo(resuelto.toma.file8t) : null;
+            if (info) {
+                it.letras = info.letras;
+                huboMigracion = true;
+            }
+        });
+    });
+    if (huboMigracion) guardarFavLists(lists);
+    if (!lists.some(l => l.id === favActiveListId)) {
+        setFavActiveListId(lists[0].id);
+        actualizarEtiquetaFavLista();
+    }
+    listEl.innerHTML = lists.map((l, listIdx) => {
+        const activa = l.id === favActiveListId;
+        const expandida = favExpandedListIds.has(l.id);
+        const subitems = !expandida ? '' : (l.items.length === 0
+            ? '<div class="fav-sub-empty">Esta lista todavía no tiene Figuras guardadas</div>'
+            : l.items.map((item, idx) => `
+                <div class="fav-sub-item" draggable="true" data-list="${l.id}" data-idx="${idx}">
+                    <span class="fav-item-drag-handle" title="Arrastrar para reordenar">⠿</span>
+                    <span class="fav-item-label" title="${etiquetaMovimientoFav(item)}">${etiquetaMovimientoFavHTML(item)}</span>
+                    <span class="fav-item-move ${idx === 0 ? 'fav-item-move-disabled' : ''}" data-action="up" data-list="${l.id}" data-idx="${idx}" title="Subir un lugar">▲</span>
+                    <span class="fav-item-move ${idx === l.items.length - 1 ? 'fav-item-move-disabled' : ''}" data-action="down" data-list="${l.id}" data-idx="${idx}" title="Bajar un lugar">▼</span>
+                    <span class="fav-item-remove" data-list="${l.id}" data-idx="${idx}" title="Quitar de la lista">✕</span>
+                </div>
+            `).join(''));
+        return `
+            <div class="dropdown-item fav-list-item ${activa ? 'selected' : ''}" draggable="true" data-id="${l.id}" data-idx="${listIdx}">
+                <span class="fav-list-drag-handle" title="Arrastrar para reordenar la lista">⠿</span>
+                <span class="fav-list-expand-toggle" data-id="${l.id}" title="Expandir/Colapsar">${expandida ? '▾' : '▸'}</span>
+                <span class="fav-list-name-label" data-id="${l.id}">📋 ${l.name} - [${l.items.length}]</span>
+                <span class="fav-list-move ${listIdx === 0 ? 'fav-item-move-disabled' : ''}" data-action="up" data-idx="${listIdx}" title="Subir lista">▲</span>
+                <span class="fav-list-move ${listIdx === lists.length - 1 ? 'fav-item-move-disabled' : ''}" data-action="down" data-idx="${listIdx}" title="Bajar lista">▼</span>
+                <span class="fav-list-remove" data-id="${l.id}" title="Eliminar esta lista">✕</span>
+            </div>
+            ${subitems}
+        `;
+    }).join('');
+
+    listEl.querySelectorAll('.fav-list-name-label').forEach(el => {
+        el.onclick = (e) => {
+            e.stopPropagation();
+            setFavActiveListId(el.dataset.id);
+            actualizarEtiquetaFavLista();
+            actualizarEstadoBotonFavAdd();
+            renderFavListDropdown();
+        };
+    });
+    listEl.querySelectorAll('.fav-list-expand-toggle').forEach(el => {
+        el.onclick = (e) => {
+            e.stopPropagation();
+            if (favExpandedListIds.has(el.dataset.id)) {
+                favExpandedListIds.delete(el.dataset.id);
+            } else {
+                favExpandedListIds.add(el.dataset.id);
+            }
+            renderFavListDropdown();
+        };
+    });
+    listEl.querySelectorAll('.fav-list-item').forEach(el => {
+        // Arrastrar y soltar para reordenar las listas entre sí.
+        el.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            favListDragState = parseInt(el.dataset.idx, 10);
+            e.dataTransfer.effectAllowed = 'move';
+            el.classList.add('dragging');
+        });
+        el.addEventListener('dragend', () => {
+            el.classList.remove('dragging');
+            favListDragState = null;
+        });
+        el.addEventListener('dragover', (e) => {
+            if (favListDragState === null) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        el.addEventListener('drop', (e) => {
+            if (favListDragState === null) return;
+            e.preventDefault();
+            e.stopPropagation();
+            moverListaFav(favListDragState, parseInt(el.dataset.idx, 10));
+        });
+    });
+    listEl.querySelectorAll('.fav-list-move').forEach(el => {
+        el.onclick = (e) => {
+            e.stopPropagation();
+            if (el.classList.contains('fav-item-move-disabled')) return;
+            const idx = parseInt(el.dataset.idx, 10);
+            const delta = el.dataset.action === 'up' ? -1 : 1;
+            moverListaFav(idx, idx + delta);
+        };
+    });
+    listEl.querySelectorAll('.fav-list-remove').forEach(el => {
+        el.onclick = (e) => {
+            e.stopPropagation();
+            eliminarListaFavoritos(el.dataset.id);
+        };
+    });
+    listEl.querySelectorAll('.fav-sub-item').forEach(el => {
+        el.onclick = () => {
+            const lista = getFavLists().find(l => l.id === el.dataset.list);
+            const item = lista && lista.items[parseInt(el.dataset.idx, 10)];
+            if (!item || !comboByKey[item.comboId]) return;
+            const resuelto = resolverTomaFavorito(item);
+            if (!resuelto) return;
+            closeAllDropdowns();
+            irAMovimientoPorCodigo(item.comboId, item.dificultad, resuelto.variantIndex);
+        };
+        // Arrastrar y soltar para reordenar dentro de la misma lista.
+        el.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            favDragState = { listId: el.dataset.list, fromIdx: parseInt(el.dataset.idx, 10) };
+            e.dataTransfer.effectAllowed = 'move';
+            el.classList.add('dragging');
+        });
+        el.addEventListener('dragend', () => {
+            el.classList.remove('dragging');
+            favDragState = null;
+        });
+        el.addEventListener('dragover', (e) => {
+            if (!favDragState || favDragState.listId !== el.dataset.list) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        el.addEventListener('drop', (e) => {
+            if (!favDragState || favDragState.listId !== el.dataset.list) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const toIdx = parseInt(el.dataset.idx, 10);
+            moverItemFavLista(favDragState.listId, favDragState.fromIdx, toIdx);
+        });
+    });
+    listEl.querySelectorAll('.fav-item-move').forEach(el => {
+        el.onclick = (e) => {
+            e.stopPropagation();
+            if (el.classList.contains('fav-item-move-disabled')) return;
+            const idx = parseInt(el.dataset.idx, 10);
+            const delta = el.dataset.action === 'up' ? -1 : 1;
+            moverItemFavLista(el.dataset.list, idx, idx + delta);
+        };
+    });
+    listEl.querySelectorAll('.fav-item-remove').forEach(el => {
+        el.onclick = (e) => {
+            e.stopPropagation();
+            const lists2 = getFavLists();
+            const lista = lists2.find(l => l.id === el.dataset.list);
+            if (!lista) return;
+            lista.items.splice(parseInt(el.dataset.idx, 10), 1);
+            guardarFavLists(lists2);
+            actualizarEtiquetaFavLista();
+            actualizarEstadoBotonFavAdd();
+            renderFavListDropdown();
+        };
+    });
+}
+
+document.getElementById('fav-list-selected').onclick = (e) => {
+    e.stopPropagation();
+    toggleDropdown('fav-list-options-panel', () => renderFavListDropdown());
+};
+document.getElementById('fav-list-options-panel').onclick = e => e.stopPropagation();
+
+document.getElementById('fav-list-new-btn').onclick = (e) => {
+    e.stopPropagation();
+    const nombre = prompt('Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+    if (!nombre || !nombre.trim()) return;
+    crearListaFavoritos(nombre.trim());
+    actualizarEtiquetaFavLista();
+    actualizarEstadoBotonFavAdd();
+    renderFavListDropdown();
+};
+
+document.getElementById('fav-list-rename-btn').onclick = (e) => {
+    e.stopPropagation();
+    const lists = getFavLists();
+    const activa = lists.find(l => l.id === favActiveListId);
+    if (!activa) return;
+    const nuevoNombre = prompt('Nuevo nombre para esta lista:', activa.name);
+    if (!nuevoNombre || !nuevoNombre.trim()) return;
+    activa.name = nuevoNombre.trim();
+    guardarFavLists(lists);
+    actualizarEtiquetaFavLista();
+    renderFavListDropdown();
+};
+
+document.getElementById('fav-list-delete-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (!favActiveListId) return;
+    eliminarListaFavoritos(favActiveListId);
+};
+
+// Botón ⭐ suelto: NO despliega ningún panel, solo agrega la Figura actual
+// (Figura + Posición Inicial/Final + Dificultad + variante que se están
+// mostrando en este momento) a la lista elegida en el menú de al lado.
+// Queda deshabilitado (ver actualizarEstadoBotonFavAdd) cuando esa Figura
+// ya está guardada en la lista activa, para no poder duplicarla.
+document.getElementById('fav-add-current-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (!currentFigureValue || !comboByKey[currentFigureValue]) return;
+    let lists = getFavLists();
+    let activa = lists.find(l => l.id === favActiveListId);
+    if (!activa) {
+        const nombre = prompt('No hay ninguna lista seleccionada. Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+        if (!nombre || !nombre.trim()) return;
+        const nueva = crearListaFavoritos(nombre.trim());
+        lists = getFavLists();
+        activa = lists.find(l => l.id === nueva.id);
+        actualizarEtiquetaFavLista();
+    }
+    const nuevoItem = { comboId: currentFigureValue, dificultad: currentDificultadValue, variantIndex: currentVariantIndex, letras: letrasDeVarianteActual() };
+    const yaExiste = activa.items.some(it => {
+        if (it.comboId !== nuevoItem.comboId || it.dificultad !== nuevoItem.dificultad) return false;
+        if (it.letras && nuevoItem.letras) return it.letras === nuevoItem.letras;
+        return it.variantIndex === nuevoItem.variantIndex;
+    });
+    if (!yaExiste) {
+        activa.items.push(nuevoItem);
+        guardarFavLists(lists);
+        actualizarEtiquetaFavLista();
+    }
+    actualizarEstadoBotonFavAdd();
+};
 
 document.getElementById('fig-options-panel').onclick = e => e.stopPropagation();
 document.getElementById('song-options-panel').onclick = e => e.stopPropagation();
@@ -2015,6 +2481,7 @@ function aplicarCambioVisual() {
     if (isPlaying) {
         reiniciarDesdeCero(true);
     }
+    actualizarEstadoBotonFavAdd();
 }
 
 prevPageBtn.onclick = () => moverCombo(-1);
@@ -2311,10 +2778,22 @@ document.getElementById('menu-title-toggle-item').onclick = () => {
 // nuevo para asegurarse de traer la última versión real de la red, no una
 // copia vieja del caché HTTP del navegador. Es destructivo (borra los
 // videos/canciones descargados), así que pide confirmación antes.
-document.getElementById('menu-clear-cache-item').onclick = async () => {
-    closeAllDropdowns();
-    const confirmado = confirm('Esto borra todo lo guardado en este dispositivo (incluido lo descargado para modo avión) y recarga la última versión de la app. ¿Continuar?');
-    if (!confirmado) return;
+// "🧹 Borrar caché y actualizar" / "🧹 ... (conservando mis favoritos)": en
+// los dos casos desregistra el Service Worker y borra TODO lo que tenga
+// cacheado (shell de la app + lo descargado para modo avión, porque ambos
+// viven en el mismo cache — ver sw.js), y recarga con un query nuevo para
+// asegurarse de traer la última versión real de la red, no una copia vieja
+// del caché HTTP del navegador. Ninguna de las dos variantes toca las
+// cookies (ahí viven las listas de favoritos y el orden de canciones, ver
+// setCookie/getCookie/getFavLists), pero la variante "conservando mis
+// favoritos" además hace un resguardo de esas cookies ANTES de borrar y las
+// vuelve a escribir después, como garantía extra pase lo que pase con el
+// resto del borrado. Es destructivo para lo descargado (borra los videos/
+// canciones offline), así que cada botón pide su propia confirmación antes
+// de llamar a esto.
+async function borrarCacheYActualizar(conservarFavoritos) {
+    const backupFavLists = conservarFavoritos ? getCookie('favLists') : null;
+    const backupFavActiveListId = conservarFavoritos ? getCookie('favActiveListId') : null;
     try {
         if ('serviceWorker' in navigator) {
             const registrations = await navigator.serviceWorker.getRegistrations();
@@ -2327,8 +2806,26 @@ document.getElementById('menu-clear-cache-item').onclick = async () => {
     } catch (err) {
         console.warn('No se pudo limpiar el caché por completo', err);
     } finally {
+        if (conservarFavoritos) {
+            if (backupFavLists !== null) setCookie('favLists', backupFavLists);
+            if (backupFavActiveListId !== null) setCookie('favActiveListId', backupFavActiveListId);
+        }
         window.location.href = window.location.pathname + '?_upd=' + Date.now();
     }
+}
+
+document.getElementById('menu-clear-cache-item').onclick = async () => {
+    closeAllDropdowns();
+    const confirmado = confirm('Esto borra todo lo guardado en este dispositivo (incluido lo descargado para modo avión) y recarga la última versión de la app. ¿Continuar?');
+    if (!confirmado) return;
+    borrarCacheYActualizar(false);
+};
+
+document.getElementById('menu-clear-cache-keep-favs-item').onclick = async () => {
+    closeAllDropdowns();
+    const confirmado = confirm('Esto borra el caché de la app y lo descargado para modo avión, y recarga la última versión. Tus listas de favoritos se mantienen. ¿Continuar?');
+    if (!confirmado) return;
+    borrarCacheYActualizar(true);
 };
 
 // ===== MODAL: TODOS LOS ATAJOS DE TECLADO CARGADOS =====
@@ -2595,6 +3092,7 @@ document.getElementById('menu-title-toggle-item').classList.toggle('active', mos
 document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
 document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
 document.getElementById('pos-igual-btn').classList.toggle('active', filtroPosIgual);
+actualizarEtiquetaFavLista();
 
 const savedSort = getCookie('songSort');
 if (savedSort === 'bpm') {

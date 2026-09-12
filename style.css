@@ -142,7 +142,7 @@ body, html {
 #posini-reset-btn { background-color: #060606; border-color: #00AEFF; }
 #posfin-reset-btn { background-color: #060606; border-color: #000CF0; }
 
-#song-dropdown-container { min-width: 320px; }
+#song-dropdown-container { min-width: 140px; }
 #fig-dropdown-group { flex: 1 1 auto; min-width: 0; }
 #ver-dropdown-group { min-width: 0; width: max-content; flex-shrink: 0; }
 #ver-dropdown-group .dropdown-container { flex: 0 0 auto; width: max-content; }
@@ -386,14 +386,12 @@ body, html {
     justify-content: center;
     opacity: 0.35;
     filter: grayscale(85%);
-    transition: filter 0.15s, opacity 0.15s, box-shadow 0.15s;
+    transition: filter 0.15s, opacity 0.15s;
 }
 .pos-igual-btn:hover { filter: grayscale(85%) brightness(1.3); }
 .pos-igual-btn.active {
     opacity: 1;
     filter: none;
-    border-color: #fff;
-    box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.6);
 }
 .pos-igual-btn.active:hover { filter: brightness(1.15); }
 
@@ -503,6 +501,197 @@ body, html {
 .history-btn:hover:not(:disabled) { background-color: #444444; }
 .history-btn:disabled { opacity: 0.35; cursor: default; }
 
+/* ===== FAVORITOS (varias listas con nombre) =====
+   Menú "Seleccionar lista" con el mismo look & feel que el selector de
+   Canciones (dropdown-container + dropdown-selected + panel), en naranja
+   (mismo color ya usado en la app para A-Z/BPM activo) como representativo
+   de esta función. Al lado, un botón ⭐ SUELTO (no despliega nada): guarda
+   la Figura actual en la lista que esté seleccionada en el menú. */
+#fav-list-dropdown-container { min-width: 0; width: 210px; flex: 0 0 210px; }
+#fav-list-dropdown-container .dropdown-selected {
+    height: 35px;
+    background-color: #da820d;
+    border-color: #8f560a;
+    color: #ffffff;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+}
+#fav-list-options-panel { right: auto; width: min(340px, 92vw); }
+#fav-list-list .dropdown-item.fav-list-item.selected { background-color: #da820d; color: #ffffff; font-weight: bold; }
+#fav-list-list .dropdown-item.fav-list-item:hover { background-color: #a8670c; }
+#fav-list-list .dropdown-item.kbd-highlight { background-color: #a8670c; }
+
+/* Fila de cada lista (dentro del panel): manija de arrastre + triángulo de
+   expandir/colapsar + nombre (que se selecciona como lista "activa" para el
+   botón ⭐) + flechitas ▲/▼ para reordenar la lista entera. */
+#fav-list-list .dropdown-item.fav-list-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+}
+#fav-list-list .fav-list-item.dragging { opacity: 0.35; }
+.fav-list-expand-toggle {
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+    cursor: pointer;
+    color: inherit;
+    font-size: 11px;
+    user-select: none;
+}
+.fav-list-name-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.fav-list-manage-row {
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #333;
+}
+.fav-mini-btn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background-color: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 5px;
+    color: #ccc;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: filter 0.15s;
+}
+.fav-mini-btn:hover { filter: brightness(1.4); border-color: #ff8f00; color: #ff8f00; }
+
+.fav-star-btn { flex-shrink: 0; color: #ff8f00; border-color: #555555; font-size: 14px; }
+.fav-star-btn:hover:not(:disabled) { background-color: #4a3300; }
+.fav-star-btn:active:not(:disabled) { filter: brightness(1.6); }
+/* Ya guardada en la lista activa: fondo/borde resaltados, para dejar claro
+   que un nuevo click ahora la QUITA de la lista en vez de duplicarla. */
+.fav-star-btn.active { background-color: #4a3300; border-color: #ff8f00; }
+
+/* Botón 🙈 (al lado del ⭐): oculta/muestra el movimiento actual de toda la
+   navegación normal (paginación, flechas, grilla). Mismo look que el ⭐,
+   pero en gris (neutro) y resaltado en rojo cuando el movimiento actual
+   YA está oculto (un nuevo click lo restablece). */
+.hide-star-btn { flex-shrink: 0; color: #bbbbbb; border-color: #555555; font-size: 14px; }
+.hide-star-btn:hover:not(:disabled) { background-color: #3a3a3a; }
+.hide-star-btn:active:not(:disabled) { filter: brightness(1.6); }
+.hide-star-btn.active { background-color: #5a0c0c; border-color: #ff5252; color: #ff8a80; }
+
+/* Debajo de la lista seleccionada (la que tiene fondo naranja), sus Figuras
+   guardadas se listan anidadas, con sangría, para que se note que "cuelgan"
+   de esa lista puntual: tocar una te lleva directo a esa Figura, "✕" la
+   quita de la lista. */
+.fav-sub-empty { font-size: 11px; color: #777; padding: 6px 12px 10px 30px; background-color: #1a1a1a; }
+.fav-sub-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 8px 12px 8px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #2a2a2a;
+    background-color: #1a1a1a;
+}
+.fav-sub-item:hover { background-color: #333; }
+.fav-sub-item.dragging { opacity: 0.35; }
+
+/* Manija de arrastre: agarrar y soltar para reordenar la Figura dentro de
+   la lista, o la lista entera dentro del panel (drag & drop nativo del
+   navegador, funciona con mouse y con touch en los navegadores que lo
+   soportan). */
+.fav-item-drag-handle, .fav-list-drag-handle {
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+    color: #777;
+    font-size: 13px;
+    cursor: grab;
+    user-select: none;
+    padding-top: 2px;
+}
+.fav-sub-item:hover .fav-item-drag-handle { color: #ccc; }
+.fav-sub-item.dragging .fav-item-drag-handle { cursor: grabbing; }
+.fav-list-item.dragging .fav-list-drag-handle { cursor: grabbing; }
+
+.fav-sub-item .fav-item-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.35;
+    padding-top: 2px;
+}
+
+/* Cada parte de la etiqueta con su propio color, para identificar de un
+   vistazo qué es cada dato: Dificultad violeta, Posición Inicial celeste,
+   Posición Final azul, Figura verde, código de letras naranja, código
+   numérico gris. */
+.fav-item-label .fav-item-dif { color: #b388ff; }
+.fav-item-label .fav-item-posini { color: #29c3ff; }
+.fav-item-label .fav-item-posfin { color: #5c7cfa; }
+.fav-item-label .fav-item-figura { color: #4caf50; }
+.fav-item-label .fav-item-letras { color: #ff8f00; }
+.fav-item-label .fav-item-num { color: #999999; }
+
+/* Flechitas ▲/▼: alternativa al arrastre para mover la Figura un lugar
+   hacia arriba o hacia abajo dentro de la misma lista. Se apagan (sin
+   click) en la punta y el final de la lista. */
+/* Flechitas ▲/▼: alternativa al arrastre para mover la Figura (o la lista
+   entera) un lugar hacia arriba o hacia abajo. Se apagan (sin click) en la
+   punta y el final. */
+.fav-item-move, .fav-list-move {
+    flex-shrink: 0;
+    color: #999;
+    font-size: 10px;
+    padding: 3px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+}
+.fav-item-move:hover, .fav-list-move:hover { color: white; background-color: #444; }
+.fav-item-move.fav-item-move-disabled, .fav-list-move.fav-item-move-disabled {
+    opacity: 0.25;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* "✕" para eliminar una lista entera directamente desde su fila (esté vacía
+   o no), mismo criterio visual que el "✕" de quitar una Figura suelta. */
+.fav-list-item .fav-list-remove {
+    flex-shrink: 0;
+    color: #999;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.fav-list-item .fav-list-remove:hover { color: white; background-color: #661111; }
+
+.fav-sub-item .fav-item-remove {
+    flex-shrink: 0;
+    color: #999;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.fav-sub-item .fav-item-remove:hover { color: white; background-color: #661111; }
+
 .controls-box {
     display: flex;
     align-items: center;
@@ -609,6 +798,7 @@ body, html {
     z-index: 150;
     box-shadow: 0 4px 12px rgba(0,0,0,0.8);
     min-width: 230px;
+    max-width: min(300px, 92vw);
     flex-direction: column;
     overflow: hidden;
 }
@@ -626,6 +816,15 @@ body, html {
 }
 .menu-item:hover { background-color: #333; }
 .menu-item + .menu-item { border-top: 1px solid #333; }
+
+/* La opción de borrar caché conservando favoritos tiene un texto más largo
+   que el resto: a diferencia de los demás ítems (nowrap, una sola línea),
+   a este se le permite partirse en más de una línea dentro del ancho
+   máximo del panel (ver .menu-options), en vez de desbordarlo. */
+#menu-clear-cache-keep-favs-item .menu-item-label {
+    white-space: normal;
+    line-height: 1.3;
+}
 
 .menu-item-check {
     color: #4caf50;
@@ -701,6 +900,9 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     background: #000;
     position: relative;
     z-index: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .video-side {
@@ -866,6 +1068,9 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     height: 100%;
     object-fit: cover;
     display: block;
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
 }
 
 .vid-hidden { opacity: 0; pointer-events: none; }

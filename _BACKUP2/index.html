@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=73">
+    <link rel="stylesheet" href="style.css?v=85">
 </head>
 <body>
 
@@ -87,6 +87,18 @@
                     <div class="dropdown-list" id="song-list"></div>
                 </div>
             </div>
+            <div class="dropdown-container fav-list-dropdown-container" id="fav-list-dropdown-container">
+                <div class="dropdown-selected" id="fav-list-selected"><span class="dropdown-label-text">📋 Seleccionar lista</span></div>
+                <div class="dropdown-options" id="fav-list-options-panel">
+                    <div class="fav-list-manage-row">
+                        <button class="fav-mini-btn" id="fav-list-new-btn" title="Nueva lista de favoritos">+</button>
+                        <button class="fav-mini-btn" id="fav-list-rename-btn" title="Renombrar la lista seleccionada">✎</button>
+                        <button class="fav-mini-btn" id="fav-list-delete-btn" title="Eliminar la lista seleccionada">🗑</button>
+                    </div>
+                    <div class="dropdown-list" id="fav-list-list"></div>
+                </div>
+            </div>
+            <button class="history-btn fav-star-btn" id="fav-add-current-btn" title="Agregar la Figura actual a la lista seleccionada">⭐</button>
             <div class="movsearch-container" id="movsearch-container">
                 <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código (B)">🔍</button>
                 <div class="movsearch-options" id="movsearch-options-panel">
@@ -137,6 +149,9 @@
                     <div class="menu-item" id="menu-clear-cache-item" title="Borra todo lo guardado (incluido el modo avión) y recarga la última versión">
                         <span class="menu-item-label">🧹 Borrar caché y actualizar</span>
                     </div>
+                    <div class="menu-item" id="menu-clear-cache-keep-favs-item" title="Borra el caché de la app y lo descargado para modo avión, y recarga la última versión, pero mantiene tus listas de favoritos">
+                        <span class="menu-item-label">🧹 Borrar caché y actualizar (conservando mis favoritos)</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -177,6 +192,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=51"></script>
+    <script src="script.js?v=61"></script>
 </body>
 </html>
