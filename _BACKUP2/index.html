@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=85">
+    <link rel="stylesheet" href="style.css?v=92">
 </head>
 <body>
 
@@ -88,19 +88,20 @@
                 </div>
             </div>
             <div class="dropdown-container fav-list-dropdown-container" id="fav-list-dropdown-container">
-                <div class="dropdown-selected" id="fav-list-selected"><span class="dropdown-label-text">📋 Seleccionar lista</span></div>
+                <div class="dropdown-selected" id="fav-list-selected"><span class="dropdown-label-text">...</span></div>
                 <div class="dropdown-options" id="fav-list-options-panel">
                     <div class="fav-list-manage-row">
                         <button class="fav-mini-btn" id="fav-list-new-btn" title="Nueva lista de favoritos">+</button>
                         <button class="fav-mini-btn" id="fav-list-rename-btn" title="Renombrar la lista seleccionada">✎</button>
+                        <button class="fav-mini-btn" id="fav-list-save-filtered-btn" title="Guardar todos los Movimientos del filtro actual en una lista (nueva o existente)" disabled>💾</button>
                         <button class="fav-mini-btn" id="fav-list-delete-btn" title="Eliminar la lista seleccionada">🗑</button>
                     </div>
                     <div class="dropdown-list" id="fav-list-list"></div>
                 </div>
             </div>
-            <button class="history-btn fav-star-btn" id="fav-add-current-btn" title="Agregar la Figura actual a la lista seleccionada">⭐</button>
+            <button class="history-btn note-btn" id="fig-note-btn" title="Anotar una nota para el movimiento actual (N)">📝</button>
             <div class="movsearch-container" id="movsearch-container">
-                <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código (B)">🔍</button>
+                <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código (L)">🔍</button>
                 <div class="movsearch-options" id="movsearch-options-panel">
                     <input type="text" class="dropdown-search" id="movsearch-search" placeholder="🔍 Buscar por código (ej. ART)...">
                     <div class="dropdown-list" id="movsearch-list"></div>
@@ -112,27 +113,27 @@
 
         <div class="controls-box">
             <button id="play-btn" class="btn-yellow" title="Reproducir (Espacio)">
-                <span id="play-icon" class="icon-play">▶</span>
+                <span id="play-icon" class="icon-play" title="Reproducir (Espacio)">▶</span>
             </button>
-            <div class="divider"></div>
+            <span class="control-divider"></span>
             <button id="refresh-btn" class="action-btn" title="Reiniciar (R)">🔄</button>
-            <div class="divider"></div>
+            <span class="control-divider"></span>
             <button id="controls-reset-btn" class="controls-reset-btn" title="Reiniciar Todos los Filtros (F)">🌈</button>
-            <div class="divider"></div>
+            <span class="control-divider"></span>
             <button id="mute-btn" class="action-btn" title="Silenciar (M)">🔊</button>
-            <div class="divider"></div>
             <div class="slow-container">
                 <div class="rate-wrapper">
-                    <span class="rate-btn" id="rate-minus">-</span>
+                    <span class="rate-btn" id="rate-minus" title="Bajar la velocidad (-)">-</span>
                     <span class="rate-input-box">
                         <span class="rate-prefix">x</span>
                         <input type="number" id="rate-input" value="1.00" step="0.01" min="0.01" max="3.00" title="Velocidad (+ / -)">
                     </span>
-                    <span class="rate-btn" id="rate-plus">+</span>
+                    <span class="rate-btn" id="rate-plus" title="Subir la velocidad (+)">+</span>
                 </div>
                 <span id="calc-bpm-label">--- BPM</span>
             </div>
-            <div class="divider"></div>
+            <button class="history-btn fav-star-btn" id="fav-add-current-btn" title="Agregar la Figura actual a la lista seleccionada (B)">⭐</button>
+            <button class="history-btn hide-star-btn" id="fig-hide-current-btn" title="Ocultar el movimiento actual (O)">🙈</button>
             <div class="menu-container" id="menu-container">
                 <button id="menu-btn" class="menu-btn" title="Más opciones">☰</button>
                 <div class="menu-options" id="menu-options-panel">
@@ -143,14 +144,27 @@
                         <span class="menu-item-label">🏷️ Mostrar código identificador</span>
                         <span class="menu-item-check" id="menu-title-toggle-check">✓</span>
                     </div>
+                    <div class="menu-item menu-item-toggle" id="menu-show-hidden-toggle-item" title="Mostrar también, en toda la navegación, las Figuras que ocultaste">
+                        <span class="menu-item-label">🙉 Mostrar figuras ocultas</span>
+                        <span class="menu-item-check" id="menu-show-hidden-toggle-check">✓</span>
+                    </div>
+                    <div class="menu-item" id="menu-reset-hidden-item" title="Vuelve a mostrar, en la navegación normal, todas las Figuras que ocultaste">
+                        <span class="menu-item-label">♻️ Restablecer todas las figuras ocultas</span>
+                    </div>
                     <div class="menu-item" id="menu-hotkeys-item">
                         <span class="menu-item-label">⌨️ Ver atajos de teclado</span>
+                    </div>
+                    <div class="menu-item" id="menu-import-item" title="Pegá un texto exportado antes para restaurar tus favoritos, tus Figuras ocultas y tus notas">
+                        <span class="menu-item-label">⬇️ Importar mis favoritos, ocultos y notas</span>
+                    </div>
+                    <div class="menu-item" id="menu-export-item" title="Genera un texto copiable con tus favoritos, tus Figuras ocultas y tus notas, para guardarlo como respaldo">
+                        <span class="menu-item-label">⬆️ Exportar mis favoritos, ocultos y notas</span>
                     </div>
                     <div class="menu-item" id="menu-clear-cache-item" title="Borra todo lo guardado (incluido el modo avión) y recarga la última versión">
                         <span class="menu-item-label">🧹 Borrar caché y actualizar</span>
                     </div>
-                    <div class="menu-item" id="menu-clear-cache-keep-favs-item" title="Borra el caché de la app y lo descargado para modo avión, y recarga la última versión, pero mantiene tus listas de favoritos">
-                        <span class="menu-item-label">🧹 Borrar caché y actualizar (conservando mis favoritos)</span>
+                    <div class="menu-item" id="menu-clear-cache-keep-favs-item" title="Borra el caché de la app y lo descargado para modo avión, y recarga la última versión, pero mantiene tus listas de favoritos, tus Figuras ocultas y tus notas">
+                        <span class="menu-item-label">🧹 Borrar caché y actualizar (conservando mis favoritos, ocultos y notas)</span>
                     </div>
                 </div>
             </div>
@@ -180,6 +194,7 @@
             <button id="video-next-btn" class="page-btn video-nav-btn video-nav-btn-right" title="Siguiente (Flecha Der)">&gt;</button>
             <button id="posini-swap-btn" class="pos-swap-btn pos-swap-btn-ini" title="Poner como Posición Inicial la actual Posición Final (y resetear la Posición Final)"><span></span></button>
             <button id="posfin-swap-btn" class="pos-swap-btn pos-swap-btn-fin" title="Poner como Posición Final la actual Posición Inicial (y resetear la Posición Inicial)"><span></span></button>
+            <div id="figure-note-display"></div>
         </div>
         <div class="video-side"></div>
         <audio id="audio-player"></audio>
@@ -192,6 +207,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=61"></script>
+    <script src="script.js?v=72"></script>
 </body>
 </html>

@@ -3146,12 +3146,19 @@ async function reproducirSincronizado(forzarPlay = false) {
         loopVideos.forEach(v => { v.currentTime = 0; v.className = 'vid-hidden'; });
         mainVideos.forEach(v => { v.currentTime = 0; v.className = 'vid-visible'; });
 
-        await Promise.all(mainVideos.map(v => v.play()));
+        // Video(s) y canción se piden arrancar juntos en el mismo
+        // Promise.all (en vez de esperar primero a que los videos terminen
+        // de arrancar y RECIÉN AHÍ pedirle play a la canción): ese pasito
+        // secuencial de más era justamente el hueco que a veces se notaba
+        // como un pequeño defasaje entre la canción y el video al cambiar
+        // de Movimiento.
+        await Promise.all([...mainVideos.map(v => v.play()), audioPlayer.play()]);
+
         if (currentSeq !== loadSequence) {
             mainVideos.forEach(v => v.pause());
+            audioPlayer.pause();
             return;
         }
-        await audioPlayer.play();
         actualizarUI(true);
         isFirstAction = false;
     } catch (e) {

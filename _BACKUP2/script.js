@@ -15,6 +15,29 @@ document.addEventListener('visibilitychange', () => {
     }
 }, { capture: true });
 
+// ===== BLOQUEO DE ORIENTACIÓN (PANTALLA SIEMPRE VERTICAL) =====
+// Reemplaza al viejo truco de "contra-rotar" con CSS (que se veía roto en
+// algunos celulares) por la Screen Orientation API del navegador: le pedimos
+// directamente que bloquee la pantalla en vertical. Sólo funciona en algunos
+// contextos (típicamente Android, y a veces sólo si la app está instalada
+// como PWA / en pantalla completa) — en los navegadores donde no está
+// soportada (ej. Safari/iOS) el pedido simplemente falla en silencio y el
+// teléfono rota como siempre, sin romper nada.
+function bloquearOrientacionVertical() {
+    if (!screen.orientation || !screen.orientation.lock) return;
+    screen.orientation.lock('portrait').catch(() => { /* no soportado acá, ignorar */ });
+}
+bloquearOrientacionVertical();
+document.addEventListener('DOMContentLoaded', bloquearOrientacionVertical);
+window.addEventListener('load', bloquearOrientacionVertical);
+// El lock puede requerir un gesto del usuario o perderse al volver de
+// segundo plano/fullscreen — se reintenta en esos momentos.
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) bloquearOrientacionVertical();
+});
+document.addEventListener('click', bloquearOrientacionVertical, { once: true });
+document.addEventListener('fullscreenchange', bloquearOrientacionVertical);
+
 // ===== PWA SERVICE WORKER =====
 // Registra el SW y, una vez activo, dispara el cacheo de videos/canciones para
 // uso offline. Esto va DESPUÉS del install (no adentro), así una descarga larga
@@ -365,6 +388,14 @@ let mostrarFigurasIndividuales = (localStorage.getItem('mostrarFigurasIndividual
 // misma. Desactivado por defecto (a diferencia de "I"/"C").
 let filtroPosIgual = (localStorage.getItem('filtroPosIgual') === '1');
 
+// Toggle "Mostrar figuras ocultas" (menú ☰): igual concepto que los toggles
+// de arriba (interruptor de visibilidad de toda la app), pero para las
+// tomas puntuales que el usuario ocultó a mano con el botón 🙈. Desactivado
+// por defecto (las ocultas NO se ven). Guardado en cookie, igual que las
+// listas de Favoritos (getCookie/setCookie están más abajo en el archivo,
+// pero al ser "function" quedan disponibles ("hoisted") desde acá).
+let mostrarFigurasOcultas = (getCookie('mostrarFigurasOcultas') === '1');
+
 // Muchas figuras son "compuestas" (ej. "Gancho + Traslado": son dos
 // movimientos hechos seguidos). Para que el filtro de Figura las encuentre
 // también al buscar por cada movimiento individual, y para poder elegir
@@ -385,6 +416,29 @@ function comboCoincideFigura(combo, valor) {
     return componentesDeFigura(combo.figura).includes(valor);
 }
 
+// Cuenta cuántas tomas de una Dificultad puntual de un combo quedan
+// "visibles" (no ocultas). Con hiddenSteps vacío (nada oculto, o "Mostrar
+// figuras ocultas" activo) es simplemente la cantidad total de tomas.
+function tomasVisiblesDeCombo(combo, dificultad, hiddenSteps) {
+    const tomas = (combo.dificultades && combo.dificultades[dificultad]) || [];
+    if (!hiddenSteps.length) return tomas.length;
+    let count = 0;
+    tomas.forEach((toma, variantIndex) => {
+        if (!pasoEstaOculto(hiddenSteps, combo.id, dificultad, variantIndex, toma)) count++;
+    });
+    return count;
+}
+
+// ¿Le queda a este combo alguna toma visible? Si se pasa una dificultadUnica
+// puntual (porque hay un filtro de Dificultad activo que no se está
+// excluyendo), sólo se mira esa; si no, alcanza con que CUALQUIERA de sus
+// dificultades tenga algo visible.
+function comboTieneTomaVisible(combo, hiddenSteps, dificultadUnica) {
+    if (!hiddenSteps.length) return true; // nada oculto: no hace falta revisar
+    const dificultades = dificultadUnica ? [dificultadUnica] : Object.keys(combo.dificultades || {});
+    return dificultades.some(d => tomasVisiblesDeCombo(combo, d, hiddenSteps) > 0);
+}
+
 // Devuelve los combos que cumplen los filtros activos, opcionalmente ignorando
 // una dimensión (para calcular las OPCIONES de esa misma dimensión sin que se
 // autofiltre a sí misma).
@@ -396,6 +450,16 @@ function combosFiltrados(excluirDimension) {
     // mismo valor sólo dejaría ver esa misma igualdad y "Cualquiera".
     const excluirPosIni = excluirDimension === 'posIni' || (filtroPosIgual && excluirDimension === 'posFin');
     const excluirPosFin = excluirDimension === 'posFin' || (filtroPosIgual && excluirDimension === 'posIni');
+    // Las Figuras ocultas (🙈) no deberían inflar los desplegables de
+    // Figura/Dificultad/Posición con opciones que ya no llevan a ningún
+    // Movimiento real — salvo que "Mostrar figuras ocultas" esté activo,
+    // en cuyo caso se ignoran (mismo criterio que construirPasosFiltrados).
+    const hiddenSteps = mostrarFigurasOcultas ? [] : getHiddenSteps();
+    // Si el filtro de Dificultad está activo y no es la dimensión que se
+    // está excluyendo, sólo esa Dificultad puntual cuenta para decidir si
+    // al combo le queda algo visible (si no, otra Dificultad oculta del
+    // mismo combo lo haría pasar igual, aunque la elegida esté vacía).
+    const dificultadParaVisibilidad = (excluirDimension !== 'dificultad') ? filterDificultad : null;
     return combosData.filter(c => {
         // Toggles "I"/"C": no respetan 'excluirDimension' (igual que los
         // demás filtros no lo hacen para SU propia dimensión) porque no son
@@ -415,6 +479,7 @@ function combosFiltrados(excluirDimension) {
         if (!excluirPosIni && filterPosIni !== null && c.posIni !== filterPosIni) return false;
         if (!excluirPosFin && filterPosFin !== null && c.posFin !== filterPosFin) return false;
         if (excluirDimension !== 'dificultad' && filterDificultad !== null && !(c.dificultades && c.dificultades[filterDificultad] && c.dificultades[filterDificultad].length)) return false;
+        if (!comboTieneTomaVisible(c, hiddenSteps, dificultadParaVisibilidad)) return false;
         return true;
     });
 }
@@ -434,10 +499,18 @@ function construirFigurasData(combos) {
 // cumplen los demás filtros activos (para poblar el desplegable de Dificultad).
 function nivelesDificultadDisponibles() {
     const candidatos = combosFiltrados('dificultad');
+    // Mismo criterio de "figuras ocultas" que combosFiltrados, pero acá hay
+    // que aplicarlo por Dificultad puntual: un combo puede tener, por
+    // ejemplo, D1 completamente oculta pero D2 visible, y en ese caso D1 no
+    // debería ofrecerse como opción aunque el combo sí pase el resto de los
+    // filtros (por eso no alcanza con combosFiltrados solo).
+    const hiddenSteps = mostrarFigurasOcultas ? [] : getHiddenSteps();
     const set = new Set();
     candidatos.forEach(c => {
         Object.keys(c.dificultades || {}).forEach(d => {
-            if (c.dificultades[d] && c.dificultades[d].length) set.add(d);
+            if (!c.dificultades[d] || !c.dificultades[d].length) return;
+            if (hiddenSteps.length && tomasVisiblesDeCombo(c, d, hiddenSteps) === 0) return;
+            set.add(d);
         });
     });
     return [...set].sort((a, b) => parseInt(a.replace('D', '')) - parseInt(b.replace('D', '')));
@@ -597,6 +670,10 @@ async function iniciarApp() {
     renderGrid();
     prepararFuentes();
     actualizarEstadoBotonFavAdd();
+    actualizarEstadoBotonHide();
+    actualizarEstadoBotonNota();
+    actualizarEstadoBotonFavSaveFiltered();
+    actualizarEtiquetaFigurasOcultas();
 }
 
 let canciones = [
@@ -1505,6 +1582,15 @@ function irAMovimientoPorCodigo(comboId, dificultad, variantIndex) {
     closeAllDropdowns();
     actualizarEtiquetaDificultad();
     aplicarCambioVisual();
+    // OJO: activarComboCompleto() ya disparó actualizarPaginacion() puertas
+    // adentro (vía cargarDificultad()), pero con la Dificultad "automática"
+    // calculada ahí, ANTES de que las líneas de arriba pisen
+    // filterDificultad/currentDificultadValue/currentVariantIndex con los
+    // valores exactos del favorito. Sin este segundo llamado, el contador
+    // de arriba (1/1, 0/0, etc.) queda con el valor viejo aunque la grilla
+    // ya se haya vuelto a pintar bien (por ejemplo, mostrando "No hay
+    // Movimientos para mostrar" con el contador todavía en "1/1").
+    actualizarPaginacion();
     registrarHistorialFiltros();
 }
 
@@ -1562,6 +1648,27 @@ function siguienteNombreListaDisponible() {
     let n = 1;
     while (nombresUsados.has(`Mi Lista ${n}`)) n++;
     return `Mi Lista ${n}`;
+}
+
+// ¿Ya existe una lista (activa o no) con ese nombre? Compara sin
+// mayúsculas/minúsculas y sin espacios sobrantes en las puntas, para no
+// permitir "Mi Lista" y "mi lista " como si fueran nombres distintos.
+// idAExcluir sirve para el caso de renombrar una lista contra sí misma.
+function nombreListaYaExiste(nombre, idAExcluir) {
+    const nombreNorm = nombre.trim().toLowerCase();
+    return getFavLists().some(l => l.id !== idAExcluir && l.name.trim().toLowerCase() === nombreNorm);
+}
+
+// ¿Este item (comboId+dificultad+variantIndex/letras) ya está guardado en
+// esta lista? Mismo criterio de comparación que usa el resto de la app
+// (favoritos/ocultos): por código de 3 letras cuando ambos lo tienen, si no
+// por variantIndex crudo.
+function itemYaEnLista(lista, item) {
+    return lista.items.some(it => {
+        if (it.comboId !== item.comboId || it.dificultad !== item.dificultad) return false;
+        if (it.letras && item.letras) return it.letras === item.letras;
+        return it.variantIndex === item.variantIndex;
+    });
 }
 
 function crearListaFavoritos(nombre) {
@@ -1720,21 +1827,63 @@ function figuraActualYaEnListaActiva() {
         return it.variantIndex === currentVariantIndex;
     });
 }
+// ¿La Figura que se está viendo ahora mismo ya está guardada en CUALQUIER
+// lista de favoritos (esté o no seleccionada como la activa)? A diferencia
+// de figuraActualYaEnListaActiva (que sólo mira la lista activa, para saber
+// si el ⭐ agrega o quita), esto es sólo informativo: se usa para el
+// puntito blanco que marca el ⭐ cuando la Figura ya está guardada en
+// alguna parte.
+function figuraActualEnAlgunaLista() {
+    if (!currentFigureValue || !comboByKey[currentFigureValue]) return false;
+    const letrasActual = letrasDeVarianteActual();
+    return getFavLists().some(l => l.items.some(it => {
+        if (it.comboId !== currentFigureValue || it.dificultad !== currentDificultadValue) return false;
+        if (it.letras && letrasActual) return it.letras === letrasActual;
+        return it.variantIndex === currentVariantIndex;
+    }));
+}
 function actualizarEstadoBotonFavAdd() {
     const btn = document.getElementById('fav-add-current-btn');
     if (!btn) return;
-    btn.disabled = figuraActualYaEnListaActiva();
+    // Ya no se deshabilita cuando está guardada: ahora un click sobre el
+    // ⭐ ya guardado la QUITA de la lista activa en vez de no hacer nada.
+    // Se resalta (ver .fav-star-btn.active) para que quede claro que el
+    // click ahora sería "quitar" en vez de "agregar".
+    const yaGuardada = figuraActualYaEnListaActiva();
+    btn.classList.toggle('active', yaGuardada);
+    btn.classList.toggle('in-list', figuraActualEnAlgunaLista());
+    btn.title = yaGuardada
+        ? 'Quitar la Figura actual de la lista seleccionada'
+        : 'Agregar la Figura actual a la lista seleccionada';
 }
 
-// Refresca el texto mostrado del menú ("📋 Seleccionar lista" por defecto,
-// o el nombre + cantidad de la lista elegida), igual patrón que el resto
-// de los desplegables (fig/posini/posfin/song).
+// Botón 💾 (guardar los Movimientos del filtro actual en una lista):
+// deshabilitado cuando no hay ningún filtro activo (Figura, Posición
+// Inicial, Posición Final ni Dificultad), porque en ese caso "el filtro
+// actual" serían TODOS los Movimientos de la app — mismo chequeo que usa
+// resetearTodosLosFiltros para saber si hay algo para resetear.
+function actualizarEstadoBotonFavSaveFiltered() {
+    const btn = document.getElementById('fav-list-save-filtered-btn');
+    if (!btn) return;
+    const hayFiltroActivo = !(filterFigura === null && filterDificultad === null && filterPosIni === null && filterPosFin === null);
+    btn.disabled = !hayFiltroActivo;
+}
+
+// Refresca el texto mostrado del menú ("..." por defecto, para que el menú
+// quepa en su ancho acotado de 85px, o el nombre + cantidad de la lista
+// elegida), igual patrón que el resto de los desplegables
+// (fig/posini/posfin/song). También marca el contenedor con la clase
+// "has-lists" cuando ya existe alguna lista creada, para que el CSS le dé
+// más ancho al botón (ver #fav-list-dropdown-container.has-lists) que
+// cuando todavía no hay ninguna.
 function actualizarEtiquetaFavLista() {
     const lists = getFavLists();
     const activa = lists.find(l => l.id === favActiveListId);
     setDropdownSelectedHTML('fav-list-selected', activa
         ? `📋 ${activa.name} - [${activa.items.length}]`
-        : '📋 Seleccionar lista');
+        : '...');
+    const contenedor = document.getElementById('fav-list-dropdown-container');
+    if (contenedor) contenedor.classList.toggle('has-lists', lists.length > 0);
 }
 
 // Panel del menú: arriba la fila +/✎/🗑 (actúan sobre la lista elegida),
@@ -1743,18 +1892,13 @@ function actualizarEtiquetaFavLista() {
 // expandir/colapsar con el triángulo ▸/▾ para ver, debajo, sus Figuras
 // guardadas (a su vez reordenables), saltar directo a una o quitarla con
 // su propia "✕".
-function renderFavListDropdown() {
-    const listEl = document.getElementById('fav-list-list');
-    const lists = getFavLists();
-    if (lists.length === 0) {
-        listEl.innerHTML = '<div class="dropdown-item" style="cursor:default;opacity:0.6;">Sin listas todavía — creá una con "+"</div>';
-        return;
-    }
-    // Migración silenciosa: a las Figuras guardadas ANTES de este cambio (sin
-    // "letras" todavía) se les completa el código de 3 letras la primera vez
-    // que se puede resolver por su variantIndex actual, y se persiste, para
-    // que de ahí en más queden identificadas por ese código estable en vez
-    // del variantIndex crudo (ver resolverTomaFavorito).
+// Completa in-place el código de 3 letras de cualquier Figura guardada que
+// todavía no lo tenga (favoritos guardados antes de que existiera este
+// campo), resolviéndolo por su variantIndex actual, y persiste el cambio si
+// hizo falta. La usan tanto el render del menú de Favoritos como la
+// exportación (que a partir de ahora sólo guarda ese código, nunca
+// comboId/Dificultad/variantIndex crudos, porque esos sí pueden cambiar).
+function migrarLetrasFavLists(lists) {
     let huboMigracion = false;
     lists.forEach(l => {
         l.items.forEach(it => {
@@ -1768,6 +1912,22 @@ function renderFavListDropdown() {
         });
     });
     if (huboMigracion) guardarFavLists(lists);
+    return lists;
+}
+
+function renderFavListDropdown() {
+    const listEl = document.getElementById('fav-list-list');
+    const lists = getFavLists();
+    if (lists.length === 0) {
+        listEl.innerHTML = '<div class="dropdown-item" style="cursor:default;opacity:0.6;">Sin listas todavía — creá una con "+"</div>';
+        return;
+    }
+    // Migración silenciosa: a las Figuras guardadas ANTES de este cambio (sin
+    // "letras" todavía) se les completa el código de 3 letras la primera vez
+    // que se puede resolver por su variantIndex actual, y se persiste, para
+    // que de ahí en más queden identificadas por ese código estable en vez
+    // del variantIndex crudo (ver resolverTomaFavorito).
+    migrarLetrasFavLists(lists);
     if (!lists.some(l => l.id === favActiveListId)) {
         setFavActiveListId(lists[0].id);
         actualizarEtiquetaFavLista();
@@ -1916,15 +2076,46 @@ function renderFavListDropdown() {
     });
 }
 
+// El panel de "Seleccionar lista" (📋) es "position: fixed" y se ancla por
+// su lado derecho al lado derecho del botón (ver CSS #fav-list-options-panel),
+// igual que el desplegable de Posición Final: se abre hacia la izquierda en
+// vez de centrarse en la pantalla. Se calculan ambas coordenadas con
+// getBoundingClientRect() (viewport), ya que "fixed" se posiciona relativo
+// a la pantalla, no al botón. Si el botón está muy cerca del borde
+// izquierdo (pantallas angostas), anclarlo estrictamente a su lado derecho
+// haría que el panel se corra fuera de la pantalla por la izquierda — por
+// eso el resultado se acota (clamp) para que el panel siempre quede
+// completo dentro del ancho visible.
+function posicionarFavListPanel() {
+    const panel = document.getElementById('fav-list-options-panel');
+    const btn = document.getElementById('fav-list-selected');
+    if (!panel || !btn) return;
+    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    const rect = btn.getBoundingClientRect();
+    const panelWidth = panel.getBoundingClientRect().width || panel.offsetWidth;
+    let right = vw - rect.right;
+    const maxRight = Math.max(0, vw - panelWidth);
+    if (right > maxRight) right = maxRight;
+    if (right < 0) right = 0;
+    panel.style.right = `${right}px`;
+    panel.style.top = `${rect.bottom + 4}px`;
+}
+
 document.getElementById('fav-list-selected').onclick = (e) => {
     e.stopPropagation();
-    toggleDropdown('fav-list-options-panel', () => renderFavListDropdown());
+    toggleDropdown('fav-list-options-panel', () => {
+        renderFavListDropdown();
+        posicionarFavListPanel();
+    });
 };
 document.getElementById('fav-list-options-panel').onclick = e => e.stopPropagation();
 
 document.getElementById('fav-list-new-btn').onclick = (e) => {
     e.stopPropagation();
-    const nombre = prompt('Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+    let nombre = prompt('Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+    while (nombre !== null && nombre.trim() && nombreListaYaExiste(nombre, null)) {
+        nombre = prompt(`Ya existe una lista llamada "${nombre.trim()}". Elegí otro nombre:`, '');
+    }
     if (!nombre || !nombre.trim()) return;
     crearListaFavoritos(nombre.trim());
     actualizarEtiquetaFavLista();
@@ -1937,11 +2128,63 @@ document.getElementById('fav-list-rename-btn').onclick = (e) => {
     const lists = getFavLists();
     const activa = lists.find(l => l.id === favActiveListId);
     if (!activa) return;
-    const nuevoNombre = prompt('Nuevo nombre para esta lista:', activa.name);
+    let nuevoNombre = prompt('Nuevo nombre para esta lista:', activa.name);
+    while (nuevoNombre !== null && nuevoNombre.trim() && nombreListaYaExiste(nuevoNombre, activa.id)) {
+        nuevoNombre = prompt(`Ya existe otra lista llamada "${nuevoNombre.trim()}". Elegí otro nombre:`, '');
+    }
     if (!nuevoNombre || !nuevoNombre.trim()) return;
     activa.name = nuevoNombre.trim();
     guardarFavLists(lists);
     actualizarEtiquetaFavLista();
+    renderFavListDropdown();
+};
+
+// Botón 💾: guarda TODOS los Movimientos que cumplen el filtro actualmente
+// activo (Figura/Posición Inicial/Posición Final/
+// Dificultad/"=", respetando también las Figuras ocultas, salvo que
+// "Mostrar figuras ocultas" esté prendido — mismo criterio que
+// construirPasosFiltrados, que es lo que arma el contador "X/Y" de arriba).
+// Útil para guardar de un solo toque, por ejemplo, "todas las Figuras de
+// D3" o "todas las que terminan en una Posición puntual".
+// A diferencia de "+" (nueva lista) y "✎" (renombrar), acá SÍ se permite
+// escribir el nombre de una lista ya existente a propósito: en vez de
+// rechazarlo, se adhiere a esa lista tal cual (sin crear una nueva ni pedir
+// otro nombre), agregando únicamente los Movimientos del filtro actual que
+// todavía no estuvieran guardados ahí — nunca duplicando los que ya estaban.
+document.getElementById('fav-list-save-filtered-btn').onclick = (e) => {
+    e.stopPropagation();
+    const pasos = construirPasosFiltrados();
+    if (pasos.length === 0) {
+        alert('No hay ningún Movimiento que cumpla el filtro actual para guardar.');
+        return;
+    }
+    const nombre = prompt(`Nombre de la lista (se van a guardar los ${pasos.length} Movimientos que cumplen el filtro actual; si el nombre ya existe, se agregan a esa lista sin repetir los que ya estaban):`, siguienteNombreListaDisponible());
+    if (!nombre || !nombre.trim()) return;
+    const nombreTrim = nombre.trim();
+
+    let lists = getFavLists();
+    const existente = lists.find(l => l.name.trim().toLowerCase() === nombreTrim.toLowerCase());
+    let listId;
+    if (existente) {
+        listId = existente.id;
+        setFavActiveListId(listId);
+    } else {
+        listId = crearListaFavoritos(nombreTrim).id;
+        lists = getFavLists();
+    }
+    const lista = lists.find(l => l.id === listId);
+    if (lista) {
+        pasos.forEach(p => {
+            const combo = comboByKey[p.comboId];
+            const toma = combo && combo.dificultades && combo.dificultades[p.dificultad] && combo.dificultades[p.dificultad][p.variantIndex];
+            const info = toma ? extraerInfoArchivo(toma.file8t) : null;
+            const item = { comboId: p.comboId, dificultad: p.dificultad, variantIndex: p.variantIndex, letras: info ? info.letras : undefined };
+            if (!itemYaEnLista(lista, item)) lista.items.push(item);
+        });
+        guardarFavLists(lists);
+    }
+    actualizarEtiquetaFavLista();
+    actualizarEstadoBotonFavAdd();
     renderFavListDropdown();
 };
 
@@ -1951,36 +2194,260 @@ document.getElementById('fav-list-delete-btn').onclick = (e) => {
     eliminarListaFavoritos(favActiveListId);
 };
 
-// Botón ⭐ suelto: NO despliega ningún panel, solo agrega la Figura actual
+// Botón ⭐ suelto: NO despliega ningún panel. Agrega la Figura actual
 // (Figura + Posición Inicial/Final + Dificultad + variante que se están
-// mostrando en este momento) a la lista elegida en el menú de al lado.
-// Queda deshabilitado (ver actualizarEstadoBotonFavAdd) cuando esa Figura
-// ya está guardada en la lista activa, para no poder duplicarla.
+// mostrando en este momento) a la lista elegida en el menú de al lado, o
+// la QUITA de esa misma lista si ya estaba guardada (ver
+// actualizarEstadoBotonFavAdd para el resaltado que indica cuál de las dos
+// cosas va a hacer el próximo click).
 document.getElementById('fav-add-current-btn').onclick = (e) => {
     e.stopPropagation();
     if (!currentFigureValue || !comboByKey[currentFigureValue]) return;
     let lists = getFavLists();
     let activa = lists.find(l => l.id === favActiveListId);
     if (!activa) {
-        const nombre = prompt('No hay ninguna lista seleccionada. Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+        let nombre = prompt('No hay ninguna lista seleccionada. Nombre de la nueva lista de favoritos:', siguienteNombreListaDisponible());
+        while (nombre !== null && nombre.trim() && nombreListaYaExiste(nombre, null)) {
+            nombre = prompt(`Ya existe una lista llamada "${nombre.trim()}". Elegí otro nombre:`, '');
+        }
         if (!nombre || !nombre.trim()) return;
         const nueva = crearListaFavoritos(nombre.trim());
         lists = getFavLists();
         activa = lists.find(l => l.id === nueva.id);
         actualizarEtiquetaFavLista();
     }
-    const nuevoItem = { comboId: currentFigureValue, dificultad: currentDificultadValue, variantIndex: currentVariantIndex, letras: letrasDeVarianteActual() };
-    const yaExiste = activa.items.some(it => {
-        if (it.comboId !== nuevoItem.comboId || it.dificultad !== nuevoItem.dificultad) return false;
-        if (it.letras && nuevoItem.letras) return it.letras === nuevoItem.letras;
-        return it.variantIndex === nuevoItem.variantIndex;
+    const letrasActual = letrasDeVarianteActual();
+    const idxExistente = activa.items.findIndex(it => {
+        if (it.comboId !== currentFigureValue || it.dificultad !== currentDificultadValue) return false;
+        if (it.letras && letrasActual) return it.letras === letrasActual;
+        return it.variantIndex === currentVariantIndex;
     });
-    if (!yaExiste) {
-        activa.items.push(nuevoItem);
-        guardarFavLists(lists);
-        actualizarEtiquetaFavLista();
+    if (idxExistente !== -1) {
+        activa.items.splice(idxExistente, 1);
+    } else {
+        activa.items.push({ comboId: currentFigureValue, dificultad: currentDificultadValue, variantIndex: currentVariantIndex, letras: letrasActual });
     }
+    guardarFavLists(lists);
+    actualizarEtiquetaFavLista();
     actualizarEstadoBotonFavAdd();
+    renderFavListDropdown();
+};
+
+// ===== FIGURAS OCULTAS =====
+// Lista simple (a diferencia de Favoritos, sin nombre ni múltiples listas)
+// de tomas puntuales que el usuario decidió sacar de la navegación normal
+// con el botón 🙈 (al lado del ⭐): [{comboId, dificultad, variantIndex,
+// letras}, ...]. A diferencia de favLists (que vive en cookie), esta lista
+// se guarda en localStorage: al no tener nombres ni estar dividida en
+// varias listas, puede crecer bastante más que los Favoritos (un usuario
+// activo termina ocultando decenas de tomas), y las cookies tienen un
+// límite de tamaño de ~4KB por cookie — pasado ese límite el navegador
+// directamente descarta el guardado sin avisar, lo cual se manifestaba
+// como "dejar de poder ocultar" a partir de cierta cantidad. localStorage
+// no tiene ese problema (~5-10MB de margen), y persiste igual entre
+// sesiones.
+function getHiddenSteps() {
+    const raw = localStorage.getItem('hiddenSteps');
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+function guardarHiddenSteps(items) {
+    localStorage.setItem('hiddenSteps', JSON.stringify(items));
+}
+
+// ===== NOTAS PERSONALES POR MOVIMIENTO =====
+// Recordatorio de texto libre, opcional, por cada toma puntual: [{comboId,
+// dificultad, variantIndex, letras, texto}, ...]. Vive en cookie (igual que
+// favLists), porque son mensajes cortos y no debería haber demasiados.
+function getNotas() {
+    const raw = getCookie('notas');
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+function guardarNotas(items) {
+    setCookie('notas', JSON.stringify(items));
+}
+
+// Busca, dentro de las notas guardadas, la que corresponde a la toma que se
+// está viendo ahora mismo (mismo criterio de comparación que el resto:
+// código de 3 letras primero, variantIndex como respaldo). Devuelve el
+// índice dentro del array (o -1), para poder reusarlo tanto al leer como
+// al editar/borrar.
+function indiceNotaActual(notas) {
+    if (!currentFigureValue || !comboByKey[currentFigureValue]) return -1;
+    const letrasActual = letrasDeVarianteActual();
+    return notas.findIndex(it => {
+        if (it.comboId !== currentFigureValue || it.dificultad !== currentDificultadValue) return false;
+        if (it.letras && letrasActual) return it.letras === letrasActual;
+        return it.variantIndex === currentVariantIndex;
+    });
+}
+
+// Refresca el look del botón 📝: resaltado cuando el movimiento actual ya
+// tiene una nota guardada (y el tooltip muestra el texto guardado), mismo
+// patrón que el resto de los botones sueltos (⭐/🙈). De paso, refresca
+// también el cartelito blanco con el texto de la nota, pegado al borde
+// inferior del video (ver actualizarNotaEnVideo).
+function actualizarEstadoBotonNota() {
+    const btn = document.getElementById('fig-note-btn');
+    if (!btn) return;
+    const notas = getNotas();
+    const idx = indiceNotaActual(notas);
+    const tieneNota = idx !== -1;
+    btn.classList.toggle('active', tieneNota);
+    btn.title = tieneNota
+        ? `Nota: ${notas[idx].texto} (N)`
+        : 'Anotar una nota para el movimiento actual (N)';
+    actualizarNotaEnVideo(tieneNota ? notas[idx].texto : null);
+}
+
+// Muestra/oculta el cartelito blanco con el texto de la nota DENTRO del
+// video actual, debajo de las flechas de Posición Inicial/Final (que suben
+// un poco mientras el cartelito está visible, para no superponerse).
+function actualizarNotaEnVideo(texto) {
+    const el = document.getElementById('figure-note-display');
+    const wrapper = document.getElementById('video-center-wrapper');
+    if (!el || !wrapper) return;
+    if (!texto) {
+        el.classList.remove('visible');
+        el.innerText = '';
+        wrapper.classList.remove('has-note');
+        return;
+    }
+    el.innerText = texto;
+    el.classList.add('visible');
+    wrapper.classList.add('has-note');
+}
+
+// Botón 📝 suelto (al lado del 🙈): abre un prompt para escribir/editar la
+// nota de la toma actual. Dejarlo en blanco borra la nota existente.
+document.getElementById('fig-note-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (!currentFigureValue || !comboByKey[currentFigureValue]) return;
+    const notas = getNotas();
+    const idxExistente = indiceNotaActual(notas);
+    const actual = idxExistente !== -1 ? notas[idxExistente].texto : '';
+    const texto = prompt('Nota personal para este movimiento (dejala vacía para borrarla):', actual);
+    if (texto === null) return; // canceló, no toca nada
+    if (texto.trim() === '') {
+        if (idxExistente !== -1) notas.splice(idxExistente, 1);
+    } else if (idxExistente !== -1) {
+        notas[idxExistente].texto = texto;
+    } else {
+        notas.push({
+            comboId: currentFigureValue,
+            dificultad: currentDificultadValue,
+            variantIndex: currentVariantIndex,
+            letras: letrasDeVarianteActual(),
+            texto,
+        });
+    }
+    guardarNotas(notas);
+    actualizarEstadoBotonNota();
+};
+
+// ¿La toma que se está viendo ahora mismo ya está en la lista de ocultas?
+// Mismo criterio de comparación (código de 3 letras primero, variantIndex
+// como respaldo) que figuraActualYaEnListaActiva.
+function pasoActualEstaOculto() {
+    if (!currentFigureValue || !comboByKey[currentFigureValue]) return false;
+    const letrasActual = letrasDeVarianteActual();
+    return getHiddenSteps().some(it => {
+        if (it.comboId !== currentFigureValue || it.dificultad !== currentDificultadValue) return false;
+        if (it.letras && letrasActual) return it.letras === letrasActual;
+        return it.variantIndex === currentVariantIndex;
+    });
+}
+
+// Refresca el look del botón 🙈: resaltado en rojo (y título distinto)
+// cuando el movimiento actual ya está oculto, para que un segundo click
+// se entienda como "restablecer" y no como "ocultar de nuevo".
+// Refresca el look del botón 🙈: resaltado en rojo (y título distinto)
+// cuando el movimiento actual ya está oculto, para que un segundo click
+// se entienda como "restablecer" y no como "ocultar de nuevo". Si no hay
+// NINGÚN Movimiento para mostrar (mismo caso que el aviso "No hay
+// Movimientos para mostrar" de renderGrid), el botón directamente se
+// deshabilita (grisado, igual que < > cuando no hay a dónde navegar): no
+// tiene sentido ofrecer ocultar/mostrar algo que ni siquiera se está viendo.
+function actualizarEstadoBotonHide() {
+    const btn = document.getElementById('fig-hide-current-btn');
+    if (!btn) return;
+    if (construirPasosFiltrados().length === 0) {
+        btn.disabled = true;
+        btn.classList.remove('active');
+        btn.title = 'No hay ningún Movimiento para ocultar/mostrar';
+        return;
+    }
+    btn.disabled = false;
+    const oculto = pasoActualEstaOculto();
+    btn.classList.toggle('active', oculto);
+    btn.title = oculto ? 'Mostrar de nuevo el movimiento actual (está oculto) (O)' : 'Ocultar el movimiento actual (O)';
+}
+
+// Botón 🙈 suelto (al lado del ⭐, mismo estilo de "un solo click, sin
+// desplegar nada"): oculta la toma actual, o la restablece si ya estaba
+// oculta. Como una toma oculta desaparece de inmediato de la navegación
+// normal (ver construirPasosFiltrados), al ocultar hay que reubicarse en
+// el movimiento que pase a ocupar ese mismo lugar (equivalente, en la
+// práctica, a "avanzar al siguiente") — salvo que "Mostrar figuras
+// ocultas" esté activo, en cuyo caso no desaparece nada y no hace falta
+// moverse.
+document.getElementById('fig-hide-current-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (!currentFigureValue || !comboByKey[currentFigureValue]) return;
+
+    const pasosAntes = !mostrarFigurasOcultas ? construirPasosFiltrados() : null;
+    const idxAntes = pasosAntes ? indicePasoActual(pasosAntes) : -1;
+
+    const hidden = getHiddenSteps();
+    const letrasActual = letrasDeVarianteActual();
+    const idxExistente = hidden.findIndex(it => {
+        if (it.comboId !== currentFigureValue || it.dificultad !== currentDificultadValue) return false;
+        if (it.letras && letrasActual) return it.letras === letrasActual;
+        return it.variantIndex === currentVariantIndex;
+    });
+
+    let seAcabaDeOcultar = false;
+    if (idxExistente !== -1) {
+        hidden.splice(idxExistente, 1);
+    } else {
+        hidden.push({ comboId: currentFigureValue, dificultad: currentDificultadValue, variantIndex: currentVariantIndex, letras: letrasActual });
+        seAcabaDeOcultar = true;
+    }
+    guardarHiddenSteps(hidden);
+
+    if (seAcabaDeOcultar && !mostrarFigurasOcultas) {
+        const pasosDespues = construirPasosFiltrados();
+        if (pasosDespues.length > 0) {
+            const nuevoIdx = Math.max(0, Math.min(idxAntes, pasosDespues.length - 1));
+            const paso = pasosDespues[nuevoIdx];
+            if (isPlaying || !isFirstAction) mutearParaCarga();
+            currentFigureValue = paso.comboId;
+            currentDificultadValue = paso.dificultad;
+            currentVariantIndex = paso.variantIndex;
+            actualizarEtiquetaDificultad();
+        }
+        // Importante: recalcular el contador de arriba SIEMPRE, incluso
+        // cuando pasosDespues.length === 0 (se acaba de ocultar el último
+        // Movimiento que quedaba visible). Si no, aplicarCambioVisual() de
+        // abajo repinta bien la grilla con "No hay Movimientos para
+        // mostrar", pero el contador queda pisado con el valor de antes de
+        // ocultar (ej. "1/1" en vez de "0/0").
+        actualizarPaginacion();
+    }
+    aplicarCambioVisual();
+    actualizarEstadoBotonHide();
+    actualizarEtiquetaFigurasOcultas();
 };
 
 document.getElementById('fig-options-panel').onclick = e => e.stopPropagation();
@@ -2311,6 +2778,9 @@ function actualizarEtiquetaDificultad() {
 // cantidad de combinaciones únicas de Posición/Figura/Posición (74).
 function construirPasosFiltrados() {
     const candidatos = combosFiltrados(null).slice().sort(compararCombos);
+    // Igual que los toggles "I"/"C"/"=": si "Mostrar figuras ocultas" está
+    // activo, directamente no hay nada que excluir acá (se ven todas).
+    const hiddenSteps = mostrarFigurasOcultas ? [] : getHiddenSteps();
     const pasos = [];
     candidatos.forEach(combo => {
         const dificultades = combo.dificultades || {};
@@ -2319,12 +2789,29 @@ function construirPasosFiltrados() {
             .forEach(dif => {
                 if (filterDificultad !== null && dif !== filterDificultad) return;
                 const tomas = dificultades[dif] || [];
-                tomas.forEach((_, variantIndex) => {
+                tomas.forEach((toma, variantIndex) => {
+                    if (hiddenSteps.length && pasoEstaOculto(hiddenSteps, combo.id, dif, variantIndex, toma)) return;
                     pasos.push({ comboId: combo.id, dificultad: dif, variantIndex });
                 });
             });
     });
     return pasos;
+}
+
+// ¿Esta toma puntual (comboId+dificultad+variantIndex) está en la lista de
+// ocultas? Se compara por código de 3 letras (identificador estable, ver
+// extraerInfoArchivo) cuando el item oculto ya lo tiene guardado; si no
+// (compatibilidad), se cae al variantIndex crudo — mismo criterio que usan
+// los Favoritos (ver figuraActualYaEnListaActiva).
+function pasoEstaOculto(hiddenSteps, comboId, dificultad, variantIndex, toma) {
+    return hiddenSteps.some(it => {
+        if (it.comboId !== comboId || it.dificultad !== dificultad) return false;
+        if (it.letras) {
+            const info = toma ? extraerInfoArchivo(toma.file8t) : null;
+            if (info) return info.letras === it.letras;
+        }
+        return it.variantIndex === variantIndex;
+    });
 }
 
 function indicePasoActual(pasos) {
@@ -2345,12 +2832,20 @@ function actualizarPaginacion() {
     if (idx === -1) idx = 0;
     const pageInputEl = document.getElementById('page-indicator-input');
     const pageTotalEl = document.getElementById('page-indicator-total');
-    // No pisar lo que el usuario está tecleando mientras tiene el foco ahí.
-    if (pageInputEl && document.activeElement !== pageInputEl) {
+    // Si no hay ningún Movimiento, forzamos "0/0" siempre, incluso si el
+    // usuario justo tenía el foco en el input tecleando un número (por
+    // ejemplo, si al cambiar de figura el nuevo filtro queda en 0
+    // resultados): no tiene sentido dejarle un número viejo con el total
+    // ya en 0 (ej. "5/0").
+    if (pageInputEl && (total === 0 || document.activeElement !== pageInputEl)) {
         pageInputEl.value = total === 0 ? 0 : idx + 1;
     }
     if (pageInputEl) {
-        pageInputEl.max = total || 1;
+        // Con 0 resultados, min/max también se ajustan a 0 para que el
+        // input quede consistente con el valor mostrado (si no, min="1"
+        // con value="0" queda incoherente aunque no se vea).
+        pageInputEl.min = total === 0 ? 0 : 1;
+        pageInputEl.max = total || 0;
         pageInputEl.disabled = (total === 0);
         // Ancho ajustado a la cantidad de dígitos actual (mínimo 1), para que
         // el número seleccionable quede tan compacto como el total de la
@@ -2482,6 +2977,9 @@ function aplicarCambioVisual() {
         reiniciarDesdeCero(true);
     }
     actualizarEstadoBotonFavAdd();
+    actualizarEstadoBotonHide();
+    actualizarEstadoBotonNota();
+    actualizarEstadoBotonFavSaveFiltered();
 }
 
 prevPageBtn.onclick = () => moverCombo(-1);
@@ -2725,12 +3223,16 @@ playBtn.onclick = () => {
 function actualizarUI(reproduciendo) {
     if (reproduciendo) {
         playBtn.className = "btn-red";
+        playBtn.title = "Detener (Espacio)";
         playIcon.innerHTML = "■";
         playIcon.className = "icon-stop";
+        playIcon.title = "Detener (Espacio)";
     } else {
         playBtn.className = isFirstAction ? "btn-yellow" : "btn-green";
+        playBtn.title = "Reproducir (Espacio)";
         playIcon.innerHTML = "▶";
         playIcon.className = "icon-play";
+        playIcon.title = "Reproducir (Espacio)";
     }
 }
 
@@ -2756,7 +3258,7 @@ function toggleMostrarTitulo() {
 // ===== MENÚ (☰): descargar para modo avión + mostrar código identificador =====
 document.getElementById('menu-btn').onclick = (e) => {
     e.stopPropagation();
-    toggleDropdown('menu-options-panel');
+    toggleDropdown('menu-options-panel', () => actualizarEtiquetaFigurasOcultas());
 };
 document.getElementById('menu-options-panel').onclick = e => e.stopPropagation();
 
@@ -2778,22 +3280,20 @@ document.getElementById('menu-title-toggle-item').onclick = () => {
 // nuevo para asegurarse de traer la última versión real de la red, no una
 // copia vieja del caché HTTP del navegador. Es destructivo (borra los
 // videos/canciones descargados), así que pide confirmación antes.
-// "🧹 Borrar caché y actualizar" / "🧹 ... (conservando mis favoritos)": en
-// los dos casos desregistra el Service Worker y borra TODO lo que tenga
-// cacheado (shell de la app + lo descargado para modo avión, porque ambos
-// viven en el mismo cache — ver sw.js), y recarga con un query nuevo para
-// asegurarse de traer la última versión real de la red, no una copia vieja
-// del caché HTTP del navegador. Ninguna de las dos variantes toca las
-// cookies (ahí viven las listas de favoritos y el orden de canciones, ver
-// setCookie/getCookie/getFavLists), pero la variante "conservando mis
-// favoritos" además hace un resguardo de esas cookies ANTES de borrar y las
+// "🧹 Borrar caché y actualizar": además de lo de siempre (desregistra el SW
+// y borra TODO lo cacheado), ahora también borra explícitamente las listas
+// de Favoritos y las Figuras ocultas, a pedido explícito (antes esas dos
+// cosas vivían fuera del cache/SW y sobrevivían intactas a este botón, algo
+// que ya no es lo que se espera de la opción "sin conservar").
+// "🧹 ... (conservando mis favoritos y ocultos)": mismo borrado de cache/SW,
+// pero además resguarda esas cookies/localStorage ANTES de borrar y las
 // vuelve a escribir después, como garantía extra pase lo que pase con el
-// resto del borrado. Es destructivo para lo descargado (borra los videos/
-// canciones offline), así que cada botón pide su propia confirmación antes
-// de llamar a esto.
+// resto del proceso.
 async function borrarCacheYActualizar(conservarFavoritos) {
     const backupFavLists = conservarFavoritos ? getCookie('favLists') : null;
     const backupFavActiveListId = conservarFavoritos ? getCookie('favActiveListId') : null;
+    const backupHiddenSteps = conservarFavoritos ? localStorage.getItem('hiddenSteps') : null;
+    const backupNotas = conservarFavoritos ? getCookie('notas') : null;
     try {
         if ('serviceWorker' in navigator) {
             const registrations = await navigator.serviceWorker.getRegistrations();
@@ -2809,6 +3309,13 @@ async function borrarCacheYActualizar(conservarFavoritos) {
         if (conservarFavoritos) {
             if (backupFavLists !== null) setCookie('favLists', backupFavLists);
             if (backupFavActiveListId !== null) setCookie('favActiveListId', backupFavActiveListId);
+            if (backupHiddenSteps !== null) localStorage.setItem('hiddenSteps', backupHiddenSteps);
+            if (backupNotas !== null) setCookie('notas', backupNotas);
+        } else {
+            setCookie('favLists', '', -1);
+            setCookie('favActiveListId', '', -1);
+            localStorage.removeItem('hiddenSteps');
+            setCookie('notas', '', -1);
         }
         window.location.href = window.location.pathname + '?_upd=' + Date.now();
     }
@@ -2816,16 +3323,157 @@ async function borrarCacheYActualizar(conservarFavoritos) {
 
 document.getElementById('menu-clear-cache-item').onclick = async () => {
     closeAllDropdowns();
-    const confirmado = confirm('Esto borra todo lo guardado en este dispositivo (incluido lo descargado para modo avión) y recarga la última versión de la app. ¿Continuar?');
+    const confirmado = confirm('Esto borra todo lo guardado en este dispositivo (incluido lo descargado para modo avión, tus listas de favoritos, tus Figuras ocultas y tus notas) y recarga la última versión de la app. ¿Continuar?');
     if (!confirmado) return;
     borrarCacheYActualizar(false);
 };
 
 document.getElementById('menu-clear-cache-keep-favs-item').onclick = async () => {
     closeAllDropdowns();
-    const confirmado = confirm('Esto borra el caché de la app y lo descargado para modo avión, y recarga la última versión. Tus listas de favoritos se mantienen. ¿Continuar?');
+    const confirmado = confirm('Esto borra el caché de la app y lo descargado para modo avión, y recarga la última versión. Tus listas de favoritos, tus Figuras ocultas y tus notas se mantienen. ¿Continuar?');
     if (!confirmado) return;
     borrarCacheYActualizar(true);
+};
+
+// ===== EXPORTAR / IMPORTAR (favoritos, ocultos y notas) =====
+// Busca, en TODOS los combos y TODAS las Dificultades del manifest actual,
+// la toma cuyo código de 3 letras coincide con el buscado. Se usa al
+// importar un backup: el backup sólo guarda ese código (nunca comboId,
+// Dificultad ni variantIndex), porque esos sí pueden cambiar si el glosario
+// se reorganiza más adelante — el código de 3 letras del archivo es el
+// único dato realmente estable a largo plazo. Devuelve
+// {comboId, dificultad, variantIndex} o null si ese código ya no existe en
+// ninguna toma actual.
+function buscarTomaPorLetrasGlobal(letras) {
+    if (!letras) return null;
+    for (const combo of combosData) {
+        const difs = combo.dificultades || {};
+        for (const dif of Object.keys(difs)) {
+            const tomas = difs[dif];
+            const idx = tomas.findIndex(t => {
+                const info = extraerInfoArchivo(t.file8t);
+                return info && info.letras === letras;
+            });
+            if (idx !== -1) return { comboId: combo.id, dificultad: dif, variantIndex: idx };
+        }
+    }
+    return null;
+}
+
+// Junta todo lo que vive fuera del caché/SW (y por lo tanto NO se puede
+// recuperar re-descargando la app) en un único objeto, para poder
+// respaldarlo y restaurarlo a mano en otro dispositivo o después de perder
+// los datos de este. Sólo se guarda el código de 3 letras de cada toma (ver
+// buscarTomaPorLetrasGlobal): ni comboId, ni Dificultad, ni variantIndex,
+// porque esos son datos que pueden cambiar con el tiempo.
+function construirBackupCompleto() {
+    const lists = migrarLetrasFavLists(getFavLists());
+    return JSON.stringify({
+        favLists: lists.map(l => ({ name: l.name, letras: l.items.map(it => it.letras).filter(Boolean) })),
+        hiddenSteps: getHiddenSteps().map(it => it.letras).filter(Boolean),
+        notas: getNotas().filter(it => it.letras).map(it => ({ letras: it.letras, texto: it.texto })),
+    });
+}
+
+// Reconstruye, a partir de los códigos de 3 letras del backup, listas de
+// Favoritos / Figuras ocultas / Notas nuevas y frescas (con el comboId,
+// Dificultad y variantIndex ACTUALES de cada código). Los códigos que ya no
+// existan en el glosario de hoy simplemente se descartan.
+function aplicarBackupCompleto(data) {
+    if (Array.isArray(data.favLists)) {
+        const lists = data.favLists.map(l => ({
+            id: generarFavListId(),
+            name: l.name || siguienteNombreListaDisponible(),
+            items: (l.letras || []).map(letras => {
+                const resuelto = buscarTomaPorLetrasGlobal(letras);
+                return resuelto ? { comboId: resuelto.comboId, dificultad: resuelto.dificultad, variantIndex: resuelto.variantIndex, letras } : null;
+            }).filter(Boolean),
+        }));
+        guardarFavLists(lists);
+        setFavActiveListId(lists.length ? lists[0].id : null);
+    }
+    if (Array.isArray(data.hiddenSteps)) {
+        const hidden = data.hiddenSteps.map(letras => {
+            const resuelto = buscarTomaPorLetrasGlobal(letras);
+            return resuelto ? { comboId: resuelto.comboId, dificultad: resuelto.dificultad, variantIndex: resuelto.variantIndex, letras } : null;
+        }).filter(Boolean);
+        guardarHiddenSteps(hidden);
+    }
+    if (Array.isArray(data.notas)) {
+        const notas = data.notas.map(n => {
+            const resuelto = buscarTomaPorLetrasGlobal(n.letras);
+            return resuelto ? { comboId: resuelto.comboId, dificultad: resuelto.dificultad, variantIndex: resuelto.variantIndex, letras: n.letras, texto: n.texto } : null;
+        }).filter(Boolean);
+        guardarNotas(notas);
+    }
+}
+
+// "⬆️ Exportar...": muestra el JSON completo en un prompt de sólo lectura de
+// hecho (el usuario puede cancelar sin que se modifique nada), listo para
+// seleccionar y copiar.
+document.getElementById('menu-export-item').onclick = () => {
+    closeAllDropdowns();
+    prompt('Copiá este texto y guardalo en un lugar seguro (Ctrl+C / Cmd+C, después Cancelar o Aceptar, da igual):', construirBackupCompleto());
+};
+
+// "⬇️ Importar...": pide pegar un texto exportado antes, y si es un JSON
+// válido, reemplaza favoritos/ocultos/notas actuales por esos (con
+// confirmación previa, porque pisa lo que ya hubiera).
+document.getElementById('menu-import-item').onclick = () => {
+    closeAllDropdowns();
+    const texto = prompt('Pegá acá el texto que generó "Exportar" antes:', '');
+    if (texto === null || texto.trim() === '') return;
+    let data;
+    try {
+        data = JSON.parse(texto);
+    } catch (e) {
+        alert('Ese texto no es un backup válido.');
+        return;
+    }
+    if (!confirm('Esto reemplaza tus listas de favoritos, tus Figuras ocultas y tus notas actuales por las del texto pegado. ¿Continuar?')) return;
+    aplicarBackupCompleto(data);
+    actualizarEtiquetaFavLista();
+    actualizarEstadoBotonFavAdd();
+    actualizarEstadoBotonHide();
+    actualizarEstadoBotonNota();
+    actualizarEtiquetaFigurasOcultas();
+    renderFavListDropdown();
+    aplicarCambioVisual();
+    actualizarPaginacion();
+};
+
+// "🙉 Mostrar figuras ocultas" (tildable, apagado por defecto): mientras
+// está activo, las tomas ocultas vuelven a aparecer en toda la navegación
+// (paginación, flechas, grilla) sin necesidad de restablecerlas una por
+// una. No desregistra ni borra nada: solo cambia qué pasos entran en
+// construirPasosFiltrados, así que alcanza con refrescar la pantalla.
+document.getElementById('menu-show-hidden-toggle-item').onclick = () => {
+    mostrarFigurasOcultas = !mostrarFigurasOcultas;
+    setCookie('mostrarFigurasOcultas', mostrarFigurasOcultas ? '1' : '0');
+    document.getElementById('menu-show-hidden-toggle-item').classList.toggle('active', mostrarFigurasOcultas);
+    aplicarCambioVisual();
+    actualizarPaginacion();
+    closeAllDropdowns();
+};
+
+// Refresca el texto de "♻️ Restablecer todas las figuras ocultas", agregando
+// al final "- [X]" con la cantidad de tomas ocultas guardadas ahora mismo
+// (mismo patrón que "📋 Mi Lista - [N]" en el selector de Favoritos).
+function actualizarEtiquetaFigurasOcultas() {
+    const el = document.querySelector('#menu-reset-hidden-item .menu-item-label');
+    if (!el) return;
+    el.innerText = `♻️ Restablecer todas las figuras ocultas - [${getHiddenSteps().length}]`;
+}
+
+// "♻️ Restablecer todas las figuras ocultas": vacía la lista de ocultas por
+// completo. No es destructivo para nada más (las Figuras solo vuelven a
+// aparecer), así que no pide confirmación.
+document.getElementById('menu-reset-hidden-item').onclick = () => {
+    guardarHiddenSteps([]);
+    actualizarEtiquetaFigurasOcultas();
+    aplicarCambioVisual();
+    actualizarPaginacion();
+    closeAllDropdowns();
 };
 
 // ===== MODAL: TODOS LOS ATAJOS DE TECLADO CARGADOS =====
@@ -2837,8 +3485,11 @@ const HOTKEYS_INFO = [
     { keys: ['R'], desc: 'Reiniciar el movimiento actual desde el principio' },
     { keys: ['M'], desc: 'Silenciar / Activar el sonido' },
     { keys: ['T'], desc: 'Mostrar u ocultar el código identificador' },
-    { keys: ['B'], desc: 'Buscar un Movimiento por su código de 3 letras' },
+    { keys: ['B'], desc: 'Agregar la Figura actual a la lista de Favoritos seleccionada' },
     { keys: ['I'], desc: 'Activar/desactivar "=": mostrar sólo tomas con Posición Inicial y Final iguales' },
+    { keys: ['O'], desc: 'Ocultar / Mostrar el movimiento actual' },
+    { keys: ['N'], desc: 'Anotar / Editar la nota personal del movimiento actual' },
+    { keys: ['L'], desc: 'Buscar un Movimiento por su código de 3 letras' },
     { keys: ['+'], desc: 'Aumentar la velocidad' },
     { keys: ['-'], desc: 'Disminuir la velocidad' },
     { keys: ['A'], desc: 'Canción anterior' },
@@ -2975,7 +3626,7 @@ document.addEventListener('keydown', (e) => {
     const isOtherInput = e.target.tagName.toLowerCase() === 'input' && !isRateInput;
     if (isOtherInput) return;
 
-    const hotkeys = [' ', 's', 'r', 'm', 't', 'b', 'i', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
+    const hotkeys = [' ', 's', 'r', 'm', 't', 'b', 'l', 'i', 'o', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
     if (isRateInput && hotkeys.includes(key)) {
         e.preventDefault();
         e.target.blur();
@@ -3005,11 +3656,23 @@ document.addEventListener('keydown', (e) => {
             break;
         case 'b':
             e.preventDefault();
+            document.getElementById('fav-add-current-btn').click();
+            break;
+        case 'l':
+            e.preventDefault();
             document.getElementById('movsearch-btn').click();
             break;
         case 'i':
             e.preventDefault();
             document.getElementById('pos-igual-btn').click();
+            break;
+        case 'o':
+            e.preventDefault();
+            document.getElementById('fig-hide-current-btn').click();
+            break;
+        case 'n':
+            e.preventDefault();
+            document.getElementById('fig-note-btn').click();
             break;
         case '+':
             e.preventDefault();
@@ -3089,6 +3752,7 @@ document.addEventListener('keydown', (e) => {
 
 // ===== INICIO =====
 document.getElementById('menu-title-toggle-item').classList.toggle('active', mostrarTitulo);
+document.getElementById('menu-show-hidden-toggle-item').classList.toggle('active', mostrarFigurasOcultas);
 document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
 document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
 document.getElementById('pos-igual-btn').classList.toggle('active', filtroPosIgual);

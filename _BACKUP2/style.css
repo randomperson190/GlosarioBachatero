@@ -10,6 +10,14 @@ body, html {
     overflow: hidden;
     font-family: sans-serif;
     color: white;
+    /* Nada acá es texto para leer/copiar: es una app de botones y controles,
+       así que se desactiva la selección de texto (y el menú nativo de
+       "Copiar / Compartir / Seleccionar todo / Buscar en la Web" que
+       aparecía, por ejemplo, al tocar sostenido sobre el número de
+       velocidad) en toda la interfaz. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 @media (min-width: 1081px) {
@@ -53,13 +61,13 @@ body, html {
 #figure-panel {
     flex: 0 0 auto;
     background: #111;
-    padding: 10px 10px 6px 10px;
+    padding: 5px 5px 5px 5px;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    border-bottom: 1px solid #222;
+    /* border-bottom: 1px solid #222; */
 }
 
 .dropdown-container {
@@ -82,6 +90,7 @@ body, html {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-left: none;
+    padding-left: 6px;
 }
 
 .reset-btn {
@@ -177,6 +186,7 @@ body, html {
     text-overflow: ellipsis;
     white-space: nowrap;
     display: block;
+    /* padding-left: 0px; */
 }
 
 #song-dropdown-container .dropdown-selected {
@@ -328,24 +338,25 @@ body, html {
     flex: 0 0 auto;
     background: #111;
     border-bottom: 1px solid #333;
-    display: flex;
+    /* display: flex; */
     justify-content: center;
     align-items: center;
-    gap: 5px;
+    /* gap: 5px; */
     position: relative;
     z-index: 50;
+    padding: 0px 5px 5px 5px;
 }
 
 /* ================= POSITION PANEL ================= */
 #position-panel {
     flex: 0 0 auto;
     background: #111;
-    padding: 3px 10px;
+    padding: 0px 5px 5px 5px;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid #222;
+    gap: 6px;
+    /* border-bottom: 1px solid #222; */
 }
 
 #posini-dropdown-group { min-width: 0; flex: 1 1 0; }
@@ -423,7 +434,7 @@ body, html {
     border-radius: 50%;
     flex-shrink: 0;
     margin-top: 1px;
-    margin-right: 10px;
+    margin-right: 8px;
     vertical-align: middle;
     position: relative;
     top: -1px;
@@ -434,9 +445,10 @@ body, html {
 .song-selector-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
     justify-content: center;
+    padding-bottom: 5px;
 }
 
 .sort-btn {
@@ -465,7 +477,7 @@ body, html {
 /* Botón lupa (🔍) para buscar Movimientos por su código de 3 letras (mismo
    que el cartel opcional del toggle "T"), a la izquierda de Deshacer. Mismo
    patrón que el menú ☰: botón + panel absoluto que se abre debajo. */
-.movsearch-container { position: relative; flex-shrink: 0; }
+.movsearch-container {position: relative;flex-shrink: 0;/* padding-top: 1px; *//* padding-bottom: 3px; *//* height: 34px; *//* font-size: 22px; */}
 
 .movsearch-options {
     display: none;
@@ -492,7 +504,7 @@ body, html {
     background: #333333;
     border: 1px solid #555555;
     color: #ffffff;
-    font-size: 13px;
+    font-size: 14px;
     padding: 4px 7px;
     border-radius: 4px;
     cursor: pointer;
@@ -507,7 +519,10 @@ body, html {
    (mismo color ya usado en la app para A-Z/BPM activo) como representativo
    de esta función. Al lado, un botón ⭐ SUELTO (no despliega nada): guarda
    la Figura actual en la lista que esté seleccionada en el menú. */
-#fav-list-dropdown-container { min-width: 0; width: 210px; flex: 0 0 210px; }
+#fav-list-dropdown-container {min-width: 0;width: 85px;max-width: 85px;flex: 0 0 45px;}
+/* Con al menos una lista creada, el botón muestra nombre + cantidad (más
+   texto que el "..." por defecto), así que se le da más ancho. */
+#fav-list-dropdown-container.has-lists {flex: 0 0 67px;}
 #fav-list-dropdown-container .dropdown-selected {
     height: 35px;
     background-color: #da820d;
@@ -515,7 +530,26 @@ body, html {
     color: #ffffff;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
 }
-#fav-list-options-panel { right: auto; width: min(340px, 92vw); }
+/* A diferencia de los demás desplegables (que ocupan el mismo ancho que su
+   propio botón), este panel es más ancho que su botón angosto de 85px, así
+   que en vez de colgar de "position: absolute" pegado a ese botón (lo que
+   podía empujarlo fuera de la pantalla según en qué parte de la fila
+   quedara el botón, y el overflow:hidden del body lo recortaba), usa
+   "position: fixed" anclado por su lado DERECHO al lado derecho del botón
+   (igual que el desplegable de Posición Final, que también arranca desde
+   la derecha), así siempre entra completo sin importar dónde esté el botón,
+   pero abriéndose hacia la izquierda en vez de centrarse en la pantalla.
+   Tanto la posición horizontal (right) como la vertical (top) se calculan
+   en JS, pegada justo debajo del botón (ver posicionarFavListPanel). */
+#fav-list-options-panel {
+    position: fixed;
+    top: 0;
+    left: auto;
+    right: 0;
+    transform: none;
+    margin-top: 0;
+    width: min(340px, 92vw);
+}
 #fav-list-list .dropdown-item.fav-list-item.selected { background-color: #da820d; color: #ffffff; font-weight: bold; }
 #fav-list-list .dropdown-item.fav-list-item:hover { background-color: #a8670c; }
 #fav-list-list .dropdown-item.kbd-highlight { background-color: #a8670c; }
@@ -573,22 +607,95 @@ body, html {
     transition: filter 0.15s;
 }
 .fav-mini-btn:hover { filter: brightness(1.4); border-color: #ff8f00; color: #ff8f00; }
+.fav-mini-btn:disabled { opacity: 0.35; cursor: default; }
+.fav-mini-btn:disabled:hover { filter: none; border-color: #555; color: #ccc; }
 
-.fav-star-btn { flex-shrink: 0; color: #ff8f00; border-color: #555555; font-size: 14px; }
-.fav-star-btn:hover:not(:disabled) { background-color: #4a3300; }
+.fav-star-btn { flex-shrink: 0; color: #ff8f00; background-color: #1a1a1a; border-color: #3a3a3a; font-size: 14px; position: relative; }
 .fav-star-btn:active:not(:disabled) { filter: brightness(1.6); }
-/* Ya guardada en la lista activa: fondo/borde resaltados, para dejar claro
-   que un nuevo click ahora la QUITA de la lista en vez de duplicarla. */
-.fav-star-btn.active { background-color: #4a3300; border-color: #ff8f00; }
+/* Ya guardada en la lista activa: fondo/borde resaltados (mismo amarillo
+   que usa el 📝 cuando el movimiento actual ya tiene una nota, para que
+   ambos "ya tiene algo guardado" se lean igual de un vistazo), para dejar
+   claro que un nuevo click ahora la QUITA de la lista en vez de duplicarla. */
+.fav-star-btn.active { background-color: #4a3300; border-color: #ffd54f; }
+/* Ya guardada en CUALQUIER lista (esté activa o no): subrayado blanco ancho
+   debajo del ícono, para notarlo de un vistazo sin tener que abrir el menú
+   y revisar lista por lista. */
+.fav-star-btn.in-list::after {
+    content: '';
+    position: absolute;
+    left: 30%;
+    right: 30%;
+    bottom: 3px;
+    height: 1px;
+    background-color: #ffffff;
+    border-radius: 1px;
+    pointer-events: none;
+}
 
 /* Botón 🙈 (al lado del ⭐): oculta/muestra el movimiento actual de toda la
-   navegación normal (paginación, flechas, grilla). Mismo look que el ⭐,
-   pero en gris (neutro) y resaltado en rojo cuando el movimiento actual
-   YA está oculto (un nuevo click lo restablece). */
-.hide-star-btn { flex-shrink: 0; color: #bbbbbb; border-color: #555555; font-size: 14px; }
-.hide-star-btn:hover:not(:disabled) { background-color: #3a3a3a; }
+   navegación normal (paginación, flechas, grilla). Mismo look que el ⭐
+   (caja con fondo y borde propios, distintos de los de #rate-minus/
+   #rate-plus), pero en gris (neutro) y resaltado en rojo cuando el
+   movimiento actual YA está oculto (un nuevo click lo restablece). */
+.hide-star-btn { flex-shrink: 0; color: #bbbbbb; background-color: #1a1a1a; border-color: #3a3a3a; font-size: 14px; }
 .hide-star-btn:active:not(:disabled) { filter: brightness(1.6); }
 .hide-star-btn.active { background-color: #5a0c0c; border-color: #ff5252; color: #ff8a80; }
+
+/* Botón 📝 (al lado del 🙈): anota/edita una nota personal (recordatorio de
+   texto libre) para el movimiento actual. Mismo look base que el 🙈, con su
+   propio color de "activo" cuando el movimiento actual ya tiene una nota
+   guardada (mismo amarillo que toma prestado el ⭐ arriba). */
+.note-btn { flex-shrink: 0; color: #bbbbbb; border-color: #555555; font-size: 14px; }
+.note-btn:active:not(:disabled) { filter: brightness(1.6); }
+.note-btn.active { background-color: #4a3b00; border-color: #ffd54f; color: #ffe082; }
+
+/* El ícono de la lupa (buscar Movimiento por código), el de Ocultar
+   Movimiento (🙈), el de Anotar Nota (📝) y el de Agregar la Figura actual
+   a la lista (⭐) comparten el mismo efecto al pasar el mouse por encima. */
+#movsearch-btn:hover:not(:disabled),
+.hide-star-btn:hover:not(:disabled),
+.note-btn:hover:not(:disabled),
+.fav-star-btn:hover:not(:disabled) {
+    background-color: #3a3a3a;
+}
+
+/* Ícono de la lupa, de la nota, de la estrella y de ocultar: mismo padding
+   horizontal acotado a 6px (en vez del 7px que traen por defecto de
+   .history-btn), para que los cuatro queden parejos entre sí. */
+#movsearch-btn,
+.note-btn,
+.fav-star-btn,
+.hide-star-btn {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+/* Nota personal del movimiento actual, mostrada DENTRO del video mismo:
+   centrada horizontalmente igual que el cartel de Posición Final (ver
+   .figure-center-overlay / .info-badge-posfin), pero más abajo que él, sin
+   quedar pegada al borde inferior del video. Fondo blanco y letra negra
+   para que se lea como un cartelito aparte, no como parte del video. Oculta
+   por completo cuando el movimiento actual no tiene ninguna nota guardada. */
+#figure-note-display {
+    display: none;
+    position: absolute;
+    left: 50%;
+    top: 67%;
+    transform: translateX(-50%);
+    z-index: 25;
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #000000;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
+    padding: 5px 10px;
+    max-width: 80%;
+    max-height: 20%;
+    overflow-y: auto;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+}
+#figure-note-display.visible { display: block; }
 
 /* Debajo de la lista seleccionada (la que tiene fondo naranja), sus Figuras
    guardadas se listan anidadas, con sangría, para que se note que "cuelgan"
@@ -699,10 +806,17 @@ body, html {
     border: 1px solid #444;
     border-radius: 8px;
     padding: 4px 10px;
-    gap: 8px;
+    gap: 6px;
 }
 
-.divider { width: 1px; height: 20px; background-color: #555; }
+/* Barra divisora vertical entre los botones principales del reproductor
+   (▶/■, 🔄, 🌈), para separarlos visualmente entre sí. */
+.control-divider {
+    width: 1px;
+    height: 20px;
+    background-color: #444444;
+    flex-shrink: 0;
+}
 
 #play-btn {
     width: 24px;
@@ -833,7 +947,7 @@ body, html {
 }
 .menu-item-toggle.active .menu-item-check { visibility: visible; }
 
-.slow-container { display: flex; align-items: center; gap: 8px; }
+.slow-container { display: flex; align-items: center; gap: 6px; }
 .rate-wrapper { display: flex; align-items: center; gap: 6px; }
 .rate-input-box { display: flex; align-items: center; gap: 2px; }
 .rate-prefix { color: #888888; font-size: 13px; pointer-events: none; line-height: 1; flex-shrink: 0; }
@@ -995,9 +1109,14 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     color: #ffffff !important;
     text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.75);
 }
+/* Mismo efecto hover/active que .figura-circle y los carteles de
+   .figure-center-overlay (.info-badge): al pasar el mouse se resaltan
+   (opacity 1 + un poco más de brillo) y al tocarlos/clickearlos se
+   iluminan todavía más. */
 @media (hover: hover) {
-    .pos-swap-btn:hover { opacity: 1; }
+    .pos-swap-btn:hover { opacity: 1; filter: brightness(1.35); }
 }
+.pos-swap-btn:active { filter: brightness(1.6); }
 
 /* Círculos verdes clickeables: uno por cada "parte" de la Figura del video
    actual (una sola si es singular, varias si es compuesta "A + B", ver
@@ -1388,11 +1507,14 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
         padding: 5px 5px;
         gap: 5px;
         justify-content: space-between;
+        padding-top: 5px;
     }
     #position-panel {
         padding: 2px 5px;
-        gap: 6px;
+        gap: 5px;
         flex-wrap: nowrap;
+        padding-top: 1px;
+        padding-bottom: 1px;
     }
     #posini-dropdown-container, #posfin-dropdown-container {
         max-width: none;
@@ -1400,19 +1522,22 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     #ui-panel {
         flex-direction: column;
         gap: 4px;
-        padding: 3px 5px;
+        padding: 5px 5px;
+        padding-top: 4px;
+        padding-bottom: 4px;
     }
     .song-selector-group {
         flex-wrap: nowrap;
         width: 100%;
-        gap: 6px;
+        gap: 5px;
         justify-content: space-between;
+        padding-bottom: 5px;
     }
     .controls-box {
         flex-wrap: nowrap;
         width: 100%;
         justify-content: center;
-        gap: 10px;
+        gap: 5px;
         padding: 5px 10px;
     }
     .dropdown-container, #song-dropdown-container {
@@ -1578,25 +1703,12 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     color: #ddd;
     line-height: 1.3;
 }
-/* ================= FORZAR SIEMPRE VERTICAL (celular) =================
-   Si el celular se gira a horizontal, no queremos que la app se reacomode:
-   tiene que seguir viéndose exactamente igual que en vertical. Como los
-   media query normales sólo saben de ancho/alto reales (no de "orientación
-   declarada"), el truco es rotar visualmente toda la página -90° cuando el
-   propio navegador reporta orientación horizontal en una pantalla de
-   celular (alto real chico, <= 500px, para no afectar tablets/iPad que sí
-   tienen su propio layout de escritorio a partir de 1081px de ancho). El
-   html rotado intercambia sus propias width/height (100vh/100vw) para que
-   todo el layout interno se siga calculando como si fuera vertical. */
-@media screen and (orientation: landscape) and (max-height: 500px) {
-    html {
-        transform: rotate(-90deg);
-        transform-origin: left top;
-        width: 100vh;
-        height: 100vw;
-        overflow: hidden;
-        position: absolute;
-        top: 100%;
-        left: 0;
-    }
-}
+/* ================= (antes: truco CSS de forzar vertical al girar el
+   celular) =================
+   Ese truco de "contra-rotar" toda la página con transform:rotate(-90deg)
+   se sacó porque se veía roto en algunos celulares. Ahora el bloqueo de
+   orientación se pide directamente al navegador desde script.js
+   (bloquearOrientacionVertical, vía Screen Orientation API), sin tocar el
+   CSS. Donde esa API no esté soportada, el celular simplemente rota como
+   cualquier página normal.
+*/

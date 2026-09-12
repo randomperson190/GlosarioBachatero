@@ -56,6 +56,18 @@ body, html {
         width: 100%;
         justify-content: center;
     }
+
+    /* En pantallas grandes (desktop/tablet), el menú de listas de
+       favoritos usa sus propios anchos fijos (distintos de los que se usan
+       en celular): uno cuando todavía no hay ninguna lista creada, y otro
+       más ancho cuando ya hay alguna (ver .has-lists, la clase que agrega
+       actualizarEtiquetaFavLista en script.js). */
+    #fav-list-dropdown-container {
+        flex: 0 0 53px;
+    }
+    #fav-list-dropdown-container.has-lists {
+        flex: 0 0 70px;
+    }
 }
 
 #figure-panel {
@@ -519,10 +531,10 @@ body, html {
    (mismo color ya usado en la app para A-Z/BPM activo) como representativo
    de esta función. Al lado, un botón ⭐ SUELTO (no despliega nada): guarda
    la Figura actual en la lista que esté seleccionada en el menú. */
-#fav-list-dropdown-container {min-width: 0;width: 85px;max-width: 85px;flex: 0 0 45px;}
+#fav-list-dropdown-container {min-width: 0;width: 85px;max-width: 85px;flex: 0 0 53px;}
 /* Con al menos una lista creada, el botón muestra nombre + cantidad (más
    texto que el "..." por defecto), así que se le da más ancho. */
-#fav-list-dropdown-container.has-lists {flex: 0 0 67px;}
+#fav-list-dropdown-container.has-lists {flex: 0 0 70px;}
 #fav-list-dropdown-container .dropdown-selected {
     height: 35px;
     background-color: #da820d;
