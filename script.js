@@ -2048,9 +2048,38 @@ function renderFavListDropdown() {
     });
 }
 
+// El panel de "Seleccionar lista" (📋) es más ancho (hasta 340px, ver CSS
+// #fav-list-options-panel) que su botón/contenedor angosto (85px, ver
+// #fav-list-dropdown-container), y se abre pegado a la izquierda de ESE
+// contenedor. Según en qué parte de la fila haya quedado ese botón (varía
+// con el largo del nombre de la canción elegida, el ancho de pantalla,
+// etc.), eso puede empujar el panel fuera del viewport y cortarlo. Acá lo
+// volvemos a alinear a la izquierda (posición por defecto) y, si así se
+// pasa del borde derecho o izquierdo de la pantalla, lo corremos lo justo
+// para que quede completo y visible.
+function posicionarFavListPanel() {
+    const panel = document.getElementById('fav-list-options-panel');
+    if (!panel) return;
+    panel.style.left = '0px';
+    panel.style.right = 'auto';
+    const margen = 8;
+    const rect = panel.getBoundingClientRect();
+    let offset = 0;
+    if (rect.right > window.innerWidth - margen) {
+        offset -= (rect.right - (window.innerWidth - margen));
+    }
+    if (rect.left + offset < margen) {
+        offset = margen - rect.left;
+    }
+    panel.style.left = `${offset}px`;
+}
+
 document.getElementById('fav-list-selected').onclick = (e) => {
     e.stopPropagation();
-    toggleDropdown('fav-list-options-panel', () => renderFavListDropdown());
+    toggleDropdown('fav-list-options-panel', () => {
+        renderFavListDropdown();
+        posicionarFavListPanel();
+    });
 };
 document.getElementById('fav-list-options-panel').onclick = e => e.stopPropagation();
 
@@ -2174,6 +2203,7 @@ document.getElementById('fav-add-current-btn').onclick = (e) => {
     guardarFavLists(lists);
     actualizarEtiquetaFavLista();
     actualizarEstadoBotonFavAdd();
+    renderFavListDropdown();
 };
 
 // ===== FIGURAS OCULTAS =====
