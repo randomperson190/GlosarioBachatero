@@ -519,7 +519,26 @@ body, html {
     color: #ffffff;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
 }
-#fav-list-options-panel { right: auto; width: min(340px, 92vw); }
+/* A diferencia de los demás desplegables (que ocupan el mismo ancho que su
+   propio botón), este panel es más ancho que su botón angosto de 85px, así
+   que en vez de colgar de "position: absolute" pegado a ese botón (lo que
+   podía empujarlo fuera de la pantalla según en qué parte de la fila
+   quedara el botón, y el overflow:hidden del body lo recortaba), usa
+   "position: fixed" anclado por su lado DERECHO al lado derecho del botón
+   (igual que el desplegable de Posición Final, que también arranca desde
+   la derecha), así siempre entra completo sin importar dónde esté el botón,
+   pero abriéndose hacia la izquierda en vez de centrarse en la pantalla.
+   Tanto la posición horizontal (right) como la vertical (top) se calculan
+   en JS, pegada justo debajo del botón (ver posicionarFavListPanel). */
+#fav-list-options-panel {
+    position: fixed;
+    top: 0;
+    left: auto;
+    right: 0;
+    transform: none;
+    margin-top: 0;
+    width: min(340px, 92vw);
+}
 #fav-list-list .dropdown-item.fav-list-item.selected { background-color: #da820d; color: #ffffff; font-weight: bold; }
 #fav-list-list .dropdown-item.fav-list-item:hover { background-color: #a8670c; }
 #fav-list-list .dropdown-item.kbd-highlight { background-color: #a8670c; }
@@ -776,7 +795,7 @@ body, html {
     border: 1px solid #444;
     border-radius: 8px;
     padding: 4px 10px;
-    gap: 8px;
+    gap: 6px;
 }
 
 /* Barra divisora vertical entre los botones principales del reproductor
@@ -917,7 +936,7 @@ body, html {
 }
 .menu-item-toggle.active .menu-item-check { visibility: visible; }
 
-.slow-container { display: flex; align-items: center; gap: 8px; }
+.slow-container { display: flex; align-items: center; gap: 6px; }
 .rate-wrapper { display: flex; align-items: center; gap: 6px; }
 .rate-input-box { display: flex; align-items: center; gap: 2px; }
 .rate-prefix { color: #888888; font-size: 13px; pointer-events: none; line-height: 1; flex-shrink: 0; }

@@ -2048,30 +2048,19 @@ function renderFavListDropdown() {
     });
 }
 
-// El panel de "Seleccionar lista" (📋) es más ancho (hasta 340px, ver CSS
-// #fav-list-options-panel) que su botón/contenedor angosto (85px, ver
-// #fav-list-dropdown-container), y se abre pegado a la izquierda de ESE
-// contenedor. Según en qué parte de la fila haya quedado ese botón (varía
-// con el largo del nombre de la canción elegida, el ancho de pantalla,
-// etc.), eso puede empujar el panel fuera del viewport y cortarlo. Acá lo
-// volvemos a alinear a la izquierda (posición por defecto) y, si así se
-// pasa del borde derecho o izquierdo de la pantalla, lo corremos lo justo
-// para que quede completo y visible.
+// El panel de "Seleccionar lista" (📋) es "position: fixed" y se ancla por
+// su lado derecho al lado derecho del botón (ver CSS #fav-list-options-panel),
+// igual que el desplegable de Posición Final: se abre hacia la izquierda en
+// vez de centrarse en la pantalla. Acá se calculan ambas coordenadas usando
+// getBoundingClientRect() (viewport), ya que "fixed" se posiciona relativo
+// a la pantalla, no al botón.
 function posicionarFavListPanel() {
     const panel = document.getElementById('fav-list-options-panel');
-    if (!panel) return;
-    panel.style.left = '0px';
-    panel.style.right = 'auto';
-    const margen = 8;
-    const rect = panel.getBoundingClientRect();
-    let offset = 0;
-    if (rect.right > window.innerWidth - margen) {
-        offset -= (rect.right - (window.innerWidth - margen));
-    }
-    if (rect.left + offset < margen) {
-        offset = margen - rect.left;
-    }
-    panel.style.left = `${offset}px`;
+    const btn = document.getElementById('fav-list-selected');
+    if (!panel || !btn) return;
+    const rect = btn.getBoundingClientRect();
+    panel.style.top = `${rect.bottom + 4}px`;
+    panel.style.right = `${window.innerWidth - rect.right}px`;
 }
 
 document.getElementById('fav-list-selected').onclick = (e) => {
