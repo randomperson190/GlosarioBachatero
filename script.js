@@ -287,6 +287,54 @@ let comboByKey = {};       // id -> combo
 let figurasData = {};      // id -> {D1:[...], D2:[...], ...}
 let figurasUnicas = [];    // lista de valores de "figura" distintos, ordenada
 let posicionesUnicas = []; // lista de valores de posición (inicial o final) distintos
+
+// ===== CÓDIGOS CORTOS DE POSICIÓN (botones de encadenar, ver más abajo) =====
+// Para cada Posición se arma un código corto (ej. "Posición Abierta Relajada
+// Paralelas al Aire 2" -> "PARPaA2"): primera letra de cada palabra
+// significativa (se saltean conectores como "al"/"en"), números tal cual.
+// El mapa palabra->código se arma UNA sola vez con TODAS las Posiciones
+// existentes (construirMapaCodigosPosicion), en el orden en que aparecen: si
+// dos palabras distintas empezarían con la misma letra, la que aparece
+// después se alarga a 2 (o más) letras para no repetirla.
+const POSICION_CODE_STOPWORDS = new Set(['al', 'en', 'de', 'del', 'la', 'el', 'los', 'las', 'sin', 'con', 'y', 'a']);
+let posicionCodeMap = {};
+let posicionCodeCache = {};
+
+function construirMapaCodigosPosicion(posiciones) {
+    posicionCodeMap = {};
+    posicionCodeCache = {};
+    const codigosUsados = new Set();
+    posiciones.forEach(nombre => {
+        if (!nombre) return;
+        nombre.split(/\s+/).forEach(palabra => {
+            const clave = palabra.toLowerCase();
+            if (posicionCodeMap[clave] !== undefined) return; // palabra ya vista
+            if (/^\d+$/.test(palabra)) return; // los números no llevan código propio
+            if (POSICION_CODE_STOPWORDS.has(clave)) return; // conector, se saltea
+            let longitud = 1;
+            let candidato = palabra.slice(0, longitud).toLowerCase();
+            while (codigosUsados.has(candidato) && longitud < palabra.length) {
+                longitud++;
+                candidato = palabra.slice(0, longitud).toLowerCase();
+            }
+            codigosUsados.add(candidato);
+            posicionCodeMap[clave] = candidato.charAt(0).toUpperCase() + candidato.slice(1);
+        });
+    });
+}
+
+function codigoDePosicion(nombre) {
+    if (typeof nombre !== 'string' || nombre === '') return '---';
+    if (posicionCodeCache[nombre] !== undefined) return posicionCodeCache[nombre];
+    const codigo = nombre.split(/\s+/).map(palabra => {
+        if (/^\d+$/.test(palabra)) return palabra;
+        const clave = palabra.toLowerCase();
+        if (POSICION_CODE_STOPWORDS.has(clave)) return '';
+        return posicionCodeMap[clave] || palabra.charAt(0).toUpperCase();
+    }).join('');
+    posicionCodeCache[nombre] = codigo;
+    return codigo;
+}
 let dificultadesUnicas = []; // lista de niveles de dificultad distintos (D1, D2, ...), ordenada
 
 // Filtros activos de los 4 desplegables. null = "cualquiera" (sin filtrar esa dimensión).
@@ -309,6 +357,13 @@ let filterDificultad = null;
 // Persistidos igual que el resto de preferencias de la app.
 let mostrarCombos = (localStorage.getItem('mostrarCombos') !== '0');
 let mostrarFigurasIndividuales = (localStorage.getItem('mostrarFigurasIndividuales') !== '0');
+
+// Toggle "=" entre Posición Inicial y Posición Final: igual concepto que los
+// toggles "I"/"C" de arriba (interruptor de visibilidad de toda la app, no
+// una dimensión de filtro más). Si está activo, sólo existen en toda la app
+// las tomas cuya Posición Inicial y Posición Final sean exactamente la
+// misma. Desactivado por defecto (a diferencia de "I"/"C").
+let filtroPosIgual = (localStorage.getItem('filtroPosIgual') === '1');
 
 // Muchas figuras son "compuestas" (ej. "Gancho + Traslado": son dos
 // movimientos hechos seguidos). Para que el filtro de Figura las encuentre
@@ -334,6 +389,13 @@ function comboCoincideFigura(combo, valor) {
 // una dimensión (para calcular las OPCIONES de esa misma dimensión sin que se
 // autofiltre a sí misma).
 function combosFiltrados(excluirDimension) {
+    // Con "=" activado, Posición Inicial y Posición Final quedan atadas como
+    // si fueran una sola dimensión: al calcular las opciones disponibles
+    // para CUALQUIERA de las dos, hay que ignorar el filtro de las DOS (no
+    // sólo el de la que se está calculando) — si no, la otra ya fijada al
+    // mismo valor sólo dejaría ver esa misma igualdad y "Cualquiera".
+    const excluirPosIni = excluirDimension === 'posIni' || (filtroPosIgual && excluirDimension === 'posFin');
+    const excluirPosFin = excluirDimension === 'posFin' || (filtroPosIgual && excluirDimension === 'posIni');
     return combosData.filter(c => {
         // Toggles "I"/"C": no respetan 'excluirDimension' (igual que los
         // demás filtros no lo hacen para SU propia dimensión) porque no son
@@ -344,9 +406,14 @@ function combosFiltrados(excluirDimension) {
             if (esCombo && !mostrarCombos) return false;
             if (!esCombo && !mostrarFigurasIndividuales) return false;
         }
+        // Toggle "=": igual que "I"/"C", aplica siempre en toda la app, sin
+        // importar 'excluirDimension' (así los desplegables de Posición
+        // Inicial/Final también quedan reducidos a las posiciones que
+        // cumplen esta condición).
+        if (filtroPosIgual && c.posIni !== c.posFin) return false;
         if (excluirDimension !== 'figura' && filterFigura !== null && !comboCoincideFigura(c, filterFigura)) return false;
-        if (excluirDimension !== 'posIni' && filterPosIni !== null && c.posIni !== filterPosIni) return false;
-        if (excluirDimension !== 'posFin' && filterPosFin !== null && c.posFin !== filterPosFin) return false;
+        if (!excluirPosIni && filterPosIni !== null && c.posIni !== filterPosIni) return false;
+        if (!excluirPosFin && filterPosFin !== null && c.posFin !== filterPosFin) return false;
         if (excluirDimension !== 'dificultad' && filterDificultad !== null && !(c.dificultades && c.dificultades[filterDificultad] && c.dificultades[filterDificultad].length)) return false;
         return true;
     });
@@ -510,6 +577,7 @@ async function iniciarApp() {
             .sort((a, b) => (a === '' ? '---' : a).localeCompare(b === '' ? '---' : b));
         posicionesUnicas = [...new Set(combosData.flatMap(c => [c.posIni, c.posFin]).filter(Boolean))]
             .sort((a, b) => a.localeCompare(b));
+        construirMapaCodigosPosicion(posicionesUnicas);
         dificultadesUnicas = [...new Set(combosData.flatMap(c => Object.keys(c.dificultades || {})))]
             .sort((a, b) => parseInt(a.replace('D', '')) - parseInt(b.replace('D', '')));
     } catch (err) {
@@ -927,6 +995,9 @@ function renderPosIniList(searchTerm = "") {
     listEl.querySelectorAll('.dropdown-item').forEach(item => {
         item.onclick = () => {
             filterPosIni = item.dataset.any === '1' ? null : item.dataset.value;
+            // Con "=" activado, Posición Inicial y Final van siempre atadas:
+            // al elegir una, la otra pasa a valer exactamente lo mismo.
+            if (filtroPosIgual) filterPosFin = filterPosIni;
             ultimaDimensionSeleccionada = 'posIni';
             closeAllDropdowns();
             recalcularComboActual();
@@ -955,6 +1026,9 @@ function renderPosFinList(searchTerm = "") {
     listEl.querySelectorAll('.dropdown-item').forEach(item => {
         item.onclick = () => {
             filterPosFin = item.dataset.any === '1' ? null : item.dataset.value;
+            // Idem: con "=" activado, fijar Posición Final también fija la
+            // Posición Inicial al mismo valor.
+            if (filtroPosIgual) filterPosIni = filterPosFin;
             ultimaDimensionSeleccionada = 'posFin';
             closeAllDropdowns();
             recalcularComboActual();
@@ -1050,11 +1124,12 @@ function closeAllDropdowns() {
     document.getElementById('posini-options-panel').style.display = 'none';
     document.getElementById('posfin-options-panel').style.display = 'none';
     document.getElementById('menu-options-panel').style.display = 'none';
+    document.getElementById('movsearch-options-panel').style.display = 'none';
 
     // Al cerrarse (desclickeado) cualquiera de los desplegables con buscador,
     // se borra lo que había escrito ahí, para que la próxima vez que se abra
     // arranque limpio en vez de seguir filtrado por la búsqueda anterior.
-    ['fig-search', 'posini-search', 'posfin-search', 'song-search'].forEach(id => {
+    ['fig-search', 'posini-search', 'posfin-search', 'song-search', 'movsearch-search'].forEach(id => {
         const input = document.getElementById(id);
         if (input) input.value = '';
     });
@@ -1081,6 +1156,7 @@ const DROPDOWN_PANEL_TO_LIST = {
     'posfin-options-panel': 'posfin-list',
     'ver-options-panel': 'ver-list',
     'song-options-panel': 'song-list',
+    'movsearch-options-panel': 'movsearch-list',
 };
 
 // Devuelve {panelId, listId} del desplegable de filtro/canción que esté
@@ -1204,6 +1280,22 @@ document.getElementById('fig-combos-btn').onclick = (e) => {
     localStorage.setItem('mostrarCombos', mostrarCombos ? '1' : '0');
     document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
     renderFigureList(document.getElementById('fig-search').value);
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+};
+document.getElementById('pos-igual-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filtroPosIgual = !filtroPosIgual;
+    localStorage.setItem('filtroPosIgual', filtroPosIgual ? '1' : '0');
+    // Si se activa y Posición Inicial/Final ya tenían valores explícitos
+    // distintos entre sí, no quedaría ninguna toma para mostrar: se iguala
+    // la Final a la Inicial para que la activación nunca deje la lista vacía.
+    if (filtroPosIgual && filterPosIni !== filterPosFin) filterPosFin = filterPosIni;
+    document.getElementById('pos-igual-btn').classList.toggle('active', filtroPosIgual);
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
     recalcularComboActual();
     aplicarCambioVisual();
     registrarHistorialFiltros();
@@ -1354,6 +1446,76 @@ document.getElementById('posfin-swap-btn').onclick = () => {
     renderPosIniList(document.getElementById('posini-search').value);
     renderPosFinList(document.getElementById('posfin-search').value);
 };
+
+// ===== BUSCADOR DE MOVIMIENTOS POR CÓDIGO (🔍, hotkey B) =====
+// Junta TODOS los Movimientos existentes (combinación + dificultad +
+// variante), sin importar los filtros activos, cada uno con el código de su
+// archivo de video (mismo "número + 3 letras" que ya usa el cartel opcional
+// del toggle "T", ver extraerInfoArchivo), para poder ir directo a
+// cualquiera tecleando su código.
+function listaMovimientosConCodigo() {
+    const lista = [];
+    combosData.forEach(combo => {
+        const dificultades = combo.dificultades || {};
+        Object.keys(dificultades)
+            .sort((a, b) => parseInt(a.replace('D', '')) - parseInt(b.replace('D', '')))
+            .forEach(dif => {
+                (dificultades[dif] || []).forEach((toma, variantIndex) => {
+                    const info = extraerInfoArchivo(toma.file8t);
+                    if (!info) return;
+                    lista.push({ comboId: combo.id, dificultad: dif, variantIndex, numero: info.numero, letras: info.letras });
+                });
+            });
+    });
+    lista.sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true }));
+    return lista;
+}
+
+function renderMovSearchList(query) {
+    const listEl = document.getElementById('movsearch-list');
+    if (!listEl) return;
+    const q = (query || '').trim().toUpperCase();
+    const todos = listaMovimientosConCodigo();
+    const filtrados = q === '' ? todos : todos.filter(m => m.letras.includes(q) || m.numero.includes(q));
+    listEl.innerHTML = filtrados.length
+        ? filtrados.map(m => `<div class="dropdown-item" data-combo="${m.comboId}" data-dif="${m.dificultad}" data-variant="${m.variantIndex}">${m.numero} - ${m.letras}</div>`).join('')
+        : `<div class="dropdown-item" style="cursor:default;opacity:0.6;">Sin resultados</div>`;
+    listEl.querySelectorAll('.dropdown-item[data-combo]').forEach(item => {
+        item.onclick = () => {
+            irAMovimientoPorCodigo(item.dataset.combo, item.dataset.dif, parseInt(item.dataset.variant, 10));
+        };
+    });
+}
+
+// Salta directo a un Movimiento puntual elegido por código: fija Figura/
+// Posición Inicial/Posición Final/Dificultad exactamente como los tiene ese
+// Movimiento (igual que activarComboCompleto) y además se para en la
+// variante exacta (variantIndex) que corresponde a ese archivo concreto.
+function irAMovimientoPorCodigo(comboId, dificultad, variantIndex) {
+    const combo = comboByKey[comboId];
+    if (!combo) return;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    activarComboCompleto(comboId);
+    filterDificultad = dificultad;
+    currentDificultadValue = dificultad;
+    currentVariantIndex = variantIndex;
+    closeAllDropdowns();
+    actualizarEtiquetaDificultad();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+}
+
+document.getElementById('movsearch-btn').onclick = (e) => {
+    e.stopPropagation();
+    toggleDropdown('movsearch-options-panel', () => {
+        renderMovSearchList('');
+        document.getElementById('movsearch-search').focus();
+    });
+};
+document.getElementById('movsearch-options-panel').onclick = e => e.stopPropagation();
+document.getElementById('movsearch-search').addEventListener('input', (e) => {
+    renderMovSearchList(e.target.value);
+});
 
 document.getElementById('fig-options-panel').onclick = e => e.stopPropagation();
 document.getElementById('song-options-panel').onclick = e => e.stopPropagation();
@@ -1744,6 +1906,16 @@ function actualizarPaginacion() {
     const posFinSwapBtn = document.getElementById('posfin-swap-btn');
     if (posIniSwapBtn) posIniSwapBtn.style.display = (total === 0) ? 'none' : '';
     if (posFinSwapBtn) posFinSwapBtn.style.display = (total === 0) ? 'none' : '';
+    // Botón izquierdo (celeste): fija como Posición Inicial la Posición Final
+    // que se ve AHORA, así que muestra el código de esa Posición Final.
+    // Botón derecho (azul): al revés, muestra el código de la Posición
+    // Inicial actual.
+    if (total > 0) {
+        const spanIni = posIniSwapBtn ? posIniSwapBtn.querySelector('span') : null;
+        const spanFin = posFinSwapBtn ? posFinSwapBtn.querySelector('span') : null;
+        if (spanIni) spanIni.innerText = codigoDePosicion(valorActualDelVideo('posFin'));
+        if (spanFin) spanFin.innerText = codigoDePosicion(valorActualDelVideo('posIni'));
+    }
 }
 
 // Salta directamente al Movimiento N (1-based) tecleado en el indicador,
@@ -1898,11 +2070,8 @@ async function reproducirSincronizado(forzarPlay = false) {
 
     const mainVideos = getAllMainVideos();
     const loopVideos = getAllLoopVideos();
-    const totalVideos = mainVideos.length;
 
-    const loadingCount = loadingIndicator.querySelector('.loading-count');
     loadingIndicator.style.display = 'flex';
-    if (loadingCount) loadingCount.textContent = `0 / ${totalVideos}`;
 
     // ── PASO 1: Reset completo ──────────────────────────────────────────────
     mainVideos.forEach(v => { v.pause(); v.currentTime = 0; v.load(); });
@@ -1932,15 +2101,11 @@ async function reproducirSincronizado(forzarPlay = false) {
         if (currentSeq !== loadSequence) return;
 
         // Esperar canplaythrough de cada video (señal mínima necesaria)
-        let readyCount = 0;
         const waitCanPlay = mainVideos.map(v => new Promise(resolve => {
             if (v.readyState >= 3) { resolve(); return; }
             const fn = () => { v.removeEventListener('canplaythrough', fn); resolve(); };
             v.addEventListener('canplaythrough', fn);
             setTimeout(resolve, 12000); // fallback 12s
-        }).then(() => {
-            readyCount++;
-            if (loadingCount) loadingCount.textContent = `${readyCount} / ${totalVideos}`;
         }));
 
         const waitAudio = new Promise(resolve => {
@@ -2175,6 +2340,8 @@ const HOTKEYS_INFO = [
     { keys: ['R'], desc: 'Reiniciar el movimiento actual desde el principio' },
     { keys: ['M'], desc: 'Silenciar / Activar el sonido' },
     { keys: ['T'], desc: 'Mostrar u ocultar el código identificador' },
+    { keys: ['B'], desc: 'Buscar un Movimiento por su código de 3 letras' },
+    { keys: ['I'], desc: 'Activar/desactivar "=": mostrar sólo tomas con Posición Inicial y Final iguales' },
     { keys: ['+'], desc: 'Aumentar la velocidad' },
     { keys: ['-'], desc: 'Disminuir la velocidad' },
     { keys: ['A'], desc: 'Canción anterior' },
@@ -2311,7 +2478,7 @@ document.addEventListener('keydown', (e) => {
     const isOtherInput = e.target.tagName.toLowerCase() === 'input' && !isRateInput;
     if (isOtherInput) return;
 
-    const hotkeys = [' ', 's', 'r', 'm', 't', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
+    const hotkeys = [' ', 's', 'r', 'm', 't', 'b', 'i', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
     if (isRateInput && hotkeys.includes(key)) {
         e.preventDefault();
         e.target.blur();
@@ -2338,6 +2505,14 @@ document.addEventListener('keydown', (e) => {
             break;
         case 't':
             toggleMostrarTitulo();
+            break;
+        case 'b':
+            e.preventDefault();
+            document.getElementById('movsearch-btn').click();
+            break;
+        case 'i':
+            e.preventDefault();
+            document.getElementById('pos-igual-btn').click();
             break;
         case '+':
             e.preventDefault();
@@ -2419,6 +2594,7 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('menu-title-toggle-item').classList.toggle('active', mostrarTitulo);
 document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
 document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
+document.getElementById('pos-igual-btn').classList.toggle('active', filtroPosIgual);
 
 const savedSort = getCookie('songSort');
 if (savedSort === 'bpm') {

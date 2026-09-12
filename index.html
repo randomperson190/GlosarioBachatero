@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=67">
+    <link rel="stylesheet" href="style.css?v=73">
 </head>
 <body>
 
@@ -59,6 +59,8 @@
             </div>
         </div>
 
+        <button class="pos-igual-btn" id="pos-igual-btn" title="Sólo Posición Inicial = Posición Final (I)">=</button>
+
         <div class="dropdown-group" id="posfin-dropdown-group">
             <button class="reset-btn" id="posfin-reset-btn" title="Cualquier Posición Final">↺</button>
             <div class="dropdown-container" id="posfin-dropdown-container">
@@ -77,12 +79,21 @@
             <div class="dropdown-container" id="song-dropdown-container">
                 <div class="dropdown-selected" id="song-selected"><span class="dropdown-label-text">🎧 Seleccionar Canción...</span></div>
                 <div class="dropdown-options" id="song-options-panel">
+                    <div class="song-sort-row">
+                        <button class="sort-btn active" id="sort-abc" title="Ordenar Alfabéticamente">A-Z</button>
+                        <button class="sort-btn" id="sort-bpm" title="Ordenar por BPM">BPM</button>
+                    </div>
                     <input type="text" class="dropdown-search" id="song-search" placeholder="🔍 Buscar canción...">
                     <div class="dropdown-list" id="song-list"></div>
                 </div>
             </div>
-            <button class="sort-btn active" id="sort-abc" title="Ordenar Alfabéticamente">A-Z</button>
-            <button class="sort-btn" id="sort-bpm" title="Ordenar por BPM">BPM</button>
+            <div class="movsearch-container" id="movsearch-container">
+                <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código (B)">🔍</button>
+                <div class="movsearch-options" id="movsearch-options-panel">
+                    <input type="text" class="dropdown-search" id="movsearch-search" placeholder="🔍 Buscar por código (ej. ART)...">
+                    <div class="dropdown-list" id="movsearch-list"></div>
+                </div>
+            </div>
             <button class="history-btn" id="undo-btn" title="Deshacer (Ctrl+Z)" disabled>↶</button>
             <button class="history-btn" id="redo-btn" title="Rehacer (Ctrl+Y)" disabled>↷</button>
         </div>
@@ -148,13 +159,12 @@
                 <div id="loading-indicator">
                     <div class="loading-spinner"></div>
                     <div class="loading-text">Cargando...</div>
-                    <div class="loading-count">0 / 0</div>
                 </div>
             </div>
             <button id="video-prev-btn" class="page-btn video-nav-btn video-nav-btn-left" title="Anterior (Flecha Izq)">&lt;</button>
             <button id="video-next-btn" class="page-btn video-nav-btn video-nav-btn-right" title="Siguiente (Flecha Der)">&gt;</button>
-            <button id="posini-swap-btn" class="pos-swap-btn pos-swap-btn-ini" title="Poner como Posición Inicial la actual Posición Final (y resetear la Posición Final)"><span>&#10229;</span></button>
-            <button id="posfin-swap-btn" class="pos-swap-btn pos-swap-btn-fin" title="Poner como Posición Final la actual Posición Inicial (y resetear la Posición Inicial)"><span>&#10230;</span></button>
+            <button id="posini-swap-btn" class="pos-swap-btn pos-swap-btn-ini" title="Poner como Posición Inicial la actual Posición Final (y resetear la Posición Final)"><span></span></button>
+            <button id="posfin-swap-btn" class="pos-swap-btn pos-swap-btn-fin" title="Poner como Posición Final la actual Posición Inicial (y resetear la Posición Inicial)"><span></span></button>
         </div>
         <div class="video-side"></div>
         <audio id="audio-player"></audio>
@@ -167,6 +177,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=46"></script>
+    <script src="script.js?v=51"></script>
 </body>
 </html>

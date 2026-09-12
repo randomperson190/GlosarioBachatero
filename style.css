@@ -332,7 +332,8 @@ body, html {
     justify-content: center;
     align-items: center;
     gap: 5px;
-    z-index: 20;
+    position: relative;
+    z-index: 50;
 }
 
 /* ================= POSITION PANEL ================= */
@@ -347,8 +348,8 @@ body, html {
     border-bottom: 1px solid #222;
 }
 
-#posini-dropdown-group { min-width: 0; flex: 1 1 auto;}
-#posfin-dropdown-group { min-width: 0; flex: 1 1 auto;}
+#posini-dropdown-group { min-width: 0; flex: 1 1 0; }
+#posfin-dropdown-group { min-width: 0; flex: 1 1 0; }
 
 #posini-dropdown-container .dropdown-selected,
 #posfin-dropdown-container .dropdown-selected {
@@ -358,6 +359,43 @@ body, html {
 }
 
 #posini-reset-btn, #posfin-reset-btn { height: 34px; }
+
+/* Botón "=" entre Posición Inicial y Posición Final: mitad celeste (color
+   de Posición Inicial) / mitad azul (color de Posición Final), con el "="
+   en blanco. Apagado por defecto (semi-transparente y sin color, como los
+   demás toggles de la app cuando están desactivados); al activarse toma
+   color completo y un resaltado blanco. Actívalo/desactívalo con el mouse
+   o con la tecla I; mientras está activo, sólo se listan/muestran las
+   tomas cuya Posición Inicial y Final sean exactamente la misma. */
+.pos-igual-btn {
+    flex-shrink: 0;
+    width: 26px;
+    height: 34px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: linear-gradient(to right, #00AEFF 50%, #000CF0 50%);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.35;
+    filter: grayscale(85%);
+    transition: filter 0.15s, opacity 0.15s, box-shadow 0.15s;
+}
+.pos-igual-btn:hover { filter: grayscale(85%) brightness(1.3); }
+.pos-igual-btn.active {
+    opacity: 1;
+    filter: none;
+    border-color: #fff;
+    box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.6);
+}
+.pos-igual-btn.active:hover { filter: brightness(1.15); }
 
 #posini-dropdown-container .dropdown-selected {
     background-color: #060606;
@@ -415,6 +453,39 @@ body, html {
 }
 .sort-btn:hover { color: white; border-color: #666; }
 .sort-btn.active { color: #ff8f00; border-color: #ff8f00; background: #2a2a2a; }
+
+/* Fila con A-Z / BPM, ahora DENTRO del menú de canciones (arriba del
+   buscador), en vez de sueltos al lado del selector. */
+.song-sort-row {
+    display: flex;
+    gap: 8px;
+    padding: 8px 8px 0 8px;
+    flex-shrink: 0;
+}
+.song-sort-row .sort-btn { flex: 1 1 auto; }
+
+/* Botón lupa (🔍) para buscar Movimientos por su código de 3 letras (mismo
+   que el cartel opcional del toggle "T"), a la izquierda de Deshacer. Mismo
+   patrón que el menú ☰: botón + panel absoluto que se abre debajo. */
+.movsearch-container { position: relative; flex-shrink: 0; }
+
+.movsearch-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 6px;
+    z-index: 150;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+    width: 240px;
+    max-height: 350px;
+    flex-direction: column;
+    overflow: hidden;
+}
+#movsearch-list .dropdown-item.selected { background-color: #003300; color: #ffffff; font-weight: bold; }
 
 /* Botones de Deshacer (↶) / Rehacer (↷) de filtros, mismo estilo que los
    botones de orden A-Z / BPM de al lado, deshabilitados (grisados) cuando
@@ -628,6 +699,8 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     min-height: 0;
     overflow: hidden;
     background: #000;
+    position: relative;
+    z-index: 1;
 }
 
 .video-side {
@@ -688,39 +761,41 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
    usando la Posición Final que se ve ahora, y resetea la Posición Final.
    Derecha (azul →): fija la Posición Final usando la Posición Inicial que
    se ve ahora, y resetea la Posición Inicial. Mismos colores que usan los
-   pos-dot del resto de la app para cada dimensión. Borde oscuro (no blanco)
-   para que no compita visualmente con los bordes claros de otros carteles. */
+   pos-dot del resto de la app para cada dimensión. Sin borde, fondo
+   translúcido de su color y letra siempre blanca. */
 .pos-swap-btn {
     position: absolute;
     bottom: 5px;
     z-index: 20;
-    background-color: transparent;
-    border: 2px solid #ffffff;
-    border-radius: 8px;
-    padding: 0px 22px;
+    border: none;
+    border-radius: 999px;
+    padding: 4px 9px;
     margin: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0.95;
+    max-width: 30%;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
 }
-.pos-swap-btn-ini { left: 6%; border-color: #00AEFF; }
-.pos-swap-btn-fin { right: 6%; border-color: #000CF0; }
+.pos-swap-btn-ini { left: 6%; background-color: rgba(0, 174, 255, 0.55); }
+.pos-swap-btn-fin { right: 6%; background-color: rgba(0, 12, 240, 0.55); }
 .pos-swap-btn span {
     display: inline-block;
-    font-size: 20px;
+    font-size: 12px;
     font-weight: 700;
     line-height: 1;
-    transform: scaleX(2);
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ffffff !important;
     text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.75);
 }
 @media (hover: hover) {
     .pos-swap-btn:hover { opacity: 1; }
 }
-.pos-swap-btn-fin span { color: #000CF0; }
-.pos-swap-btn-ini span { color: #00AEFF; }
 
 /* Círculos verdes clickeables: uno por cada "parte" de la Figura del video
    actual (una sola si es singular, varias si es compuesta "A + B", ver
@@ -993,11 +1068,6 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     color: white;
     font-size: 14px;
     font-weight: bold;
-}
-
-.loading-count {
-    color: #888;
-    font-size: 12px;
 }
 
 /* Aviso cuando no queda ningún Movimiento que mostrar (ej: "I" y "C"
@@ -1302,4 +1372,26 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     font-size: 13px;
     color: #ddd;
     line-height: 1.3;
+}
+/* ================= FORZAR SIEMPRE VERTICAL (celular) =================
+   Si el celular se gira a horizontal, no queremos que la app se reacomode:
+   tiene que seguir viéndose exactamente igual que en vertical. Como los
+   media query normales sólo saben de ancho/alto reales (no de "orientación
+   declarada"), el truco es rotar visualmente toda la página -90° cuando el
+   propio navegador reporta orientación horizontal en una pantalla de
+   celular (alto real chico, <= 500px, para no afectar tablets/iPad que sí
+   tienen su propio layout de escritorio a partir de 1081px de ancho). El
+   html rotado intercambia sus propias width/height (100vh/100vw) para que
+   todo el layout interno se siga calculando como si fuera vertical. */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    html {
+        transform: rotate(-90deg);
+        transform-origin: left top;
+        width: 100vh;
+        height: 100vw;
+        overflow: hidden;
+        position: absolute;
+        top: 100%;
+        left: 0;
+    }
 }

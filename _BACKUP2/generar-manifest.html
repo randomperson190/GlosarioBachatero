@@ -2,346 +2,301 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador de figuras-manifest.json</title>
+<title>Generar Manifest de Figuras</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩰</text></svg>">
 <style>
-    :root {
-        --bg: #141013;
-        --bg-card: #1e181c;
-        --border: #34282d;
-        --text: #f1e9ea;
-        --muted: #a99196;
-        --accent: #d9713c;
-        --accent-dim: #7a4326;
-        --ok: #7fae6c;
-        --warn: #e0b23d;
-    }
-    * { box-sizing: border-box; }
-    body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--text);
-        font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        line-height: 1.5;
-    }
-    .wrap {
-        max-width: 720px;
-        margin: 0 auto;
-        padding: 40px 24px 80px;
-    }
-    header h1 {
-        font-size: 1.5rem;
-        margin: 0 0 8px;
-        letter-spacing: -0.01em;
-    }
-    header p {
-        color: var(--muted);
-        margin: 0 0 32px;
-        max-width: 58ch;
-    }
-    .paso {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 20px 24px;
-        margin-bottom: 20px;
-    }
-    .paso h2 {
-        font-size: 0.95rem;
-        margin: 0 0 6px;
-        color: var(--accent);
-        font-weight: 600;
-    }
-    .paso > p {
-        color: var(--muted);
-        margin: 0 0 14px;
-        font-size: 0.9rem;
-    }
-    input[type="text"] {
-        width: 100%;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        color: var(--text);
-        padding: 10px 12px;
-        border-radius: 6px;
-        font-size: 0.95rem;
-    }
-    input[type="text"]:focus { outline: 1px solid var(--accent); }
-    .boton-elegir, .boton-principal {
-        display: inline-block;
-        background: var(--accent);
-        color: #1a1214;
-        font-weight: 600;
-        padding: 11px 20px;
-        border-radius: 7px;
-        border: none;
-        cursor: pointer;
-        font-size: 0.92rem;
-    }
-    .boton-elegir:hover, .boton-principal:hover { background: #e78753; }
-    .boton-principal:disabled { background: var(--accent-dim); cursor: not-allowed; color: var(--muted); }
-    #folderName { color: var(--muted); font-size: 0.88rem; margin: 12px 0 0; }
-    .resumen-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin: 4px 0 16px;
-    }
-    .resumen-num {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 12px;
-        text-align: center;
-    }
-    .resumen-num strong { display: block; font-size: 1.5rem; color: var(--accent); }
-    .resumen-num span { font-size: 0.78rem; color: var(--muted); }
-    .aviso {
-        border-left: 3px solid var(--warn);
-        background: #2a2118;
-        padding: 10px 14px;
-        border-radius: 0 6px 6px 0;
-        font-size: 0.85rem;
-        margin-bottom: 10px;
-    }
-    .aviso.error { border-left-color: #d9534f; background: #2a1717; }
-    .aviso b { color: var(--warn); }
-    .aviso.error b { color: #e07a76; }
-    .aviso ul { margin: 6px 0 0; padding-left: 20px; }
-    .aviso li { margin-bottom: 2px; }
-    details { margin-top: 16px; }
-    summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.82rem; }
-    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-weight: 500; }
-    td.num { color: var(--muted); text-align: right; }
-    .ok-badge { color: var(--ok); }
+    body { font-family: -apple-system, Segoe UI, Arial, sans-serif; background:#111; color:#eee; padding:24px; max-width:900px; margin:0 auto; }
+    h1 { font-size:20px; }
+    p { color:#bbb; line-height:1.5; }
+    .box { background:#1c1c1c; border:1px solid #333; border-radius:8px; padding:16px; margin:16px 0; }
+    button { background:#f5c518; color:#111; border:none; border-radius:6px; padding:10px 16px; font-weight:bold; cursor:pointer; font-size:14px; }
+    button:disabled { opacity:.4; cursor:default; }
+    button.secondary { background:#333; color:#eee; }
+    textarea { width:100%; min-height:140px; background:#0d0d0d; color:#ddd; border:1px solid #333; border-radius:6px; padding:8px; font-family:monospace; font-size:12px; box-sizing:border-box; }
+    input[type=text] { background:#0d0d0d; color:#ddd; border:1px solid #333; border-radius:6px; padding:6px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+    td, th { border-bottom:1px solid #292929; padding:4px 6px; text-align:left; }
+    .ok { color:#7cd992; }
+    .warn { color:#f0a04b; }
+    .err { color:#f0665e; }
+    .count { font-size:28px; font-weight:bold; }
+    .count-label { color:#999; font-size:12px; }
+    .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; text-align:center; }
+    #warnings-list, #combos-preview { max-height:280px; overflow:auto; }
+    .hidden { display:none; }
+    code { background:#0d0d0d; padding:1px 5px; border-radius:4px; }
 </style>
 </head>
 <body>
-<div class="wrap">
-    <header>
-        <h1>Generador de figuras-manifest.json</h1>
-        <p>
-            Esta página escanea (en tu propio navegador, nada se sube a ningún lado) la carpeta con tus videos de
-            figuras y arma el archivo <code>figuras-manifest.json</code> que usa el reproductor. Volvé a correrla
-            cada vez que agregues, saques o renombres videos.
-        </p>
-    </header>
 
-    <section class="paso">
-        <h2>1. Carpeta donde van a vivir los videos en el sitio</h2>
-        <p>
-            Ruta relativa a <code>index.html</code> donde vas a subir estos .mp4 (con la barra final).
-            Si no cambiaste nada, dejá el valor por defecto.
-        </p>
-        <input id="basePath" type="text" value="Figuras/">
-    </section>
+<h1>🩰 Generar figuras-manifest.json</h1>
+<p>
+    Soporta varios formatos de nombre de archivo, y podés mezclarlos en la misma carpeta sin problema:<br>
+    &nbsp;&nbsp;• Actual: <code>NNN_Dificultad_PosIni_Figura_PosFin_COD_7t.mp4</code><br>
+    &nbsp;&nbsp;• Anterior: <code>NNN_PosIni_Figura_PosFin_Dificultad_COD_7t.mp4</code><br>
+    &nbsp;&nbsp;• Viejo: <code>PosIni_Figura_PosFin_Dificultad[-V2]_7t.mp4</code><br>
+    La Dificultad (<code>D1</code>, <code>D2</code>...) se detecta esté donde esté dentro del nombre.
+</p>
 
-    <section class="paso">
-        <h2>2. Elegí la carpeta con los .mp4</h2>
-        <p>Funciona en Chrome, Edge y navegadores basados en Chromium. En Firefox el selector de carpetas puede no aparecer.</p>
-        <label class="boton-elegir">
-            📁 Elegir carpeta...
-            <input id="folderInput" type="file" webkitdirectory multiple hidden>
-        </label>
-        <p id="folderName"></p>
-    </section>
+<div class="box">
+    <label><b>Ruta base para los links del manifest</b> (se antepone a cada nombre de archivo):</label><br><br>
+    <input type="text" id="base-path" value="Figuras/" size="30">
+</div>
 
-    <section id="resultado" class="paso" hidden>
-        <h2>3. Resultado</h2>
-        <div class="resumen-grid">
-            <div class="resumen-num"><strong id="numCombos">0</strong><span>combinaciones</span></div>
-            <div class="resumen-num"><strong id="numFiguras">0</strong><span>figuras distintas</span></div>
-            <div class="resumen-num"><strong id="numPosiciones">0</strong><span>posiciones distintas</span></div>
-        </div>
-        <div id="avisos"></div>
-        <button id="descargarBtn" class="boton-principal">⬇ Descargar figuras-manifest.json</button>
-        <details>
-            <summary>Ver las <span id="comboCount"></span> combinaciones detectadas</summary>
-            <div id="tablaCombos"></div>
-        </details>
-    </section>
+<div class="box">
+    <b>Opción A — Elegir carpeta de videos</b> (recomendado, Chrome/Edge en escritorio)<br><br>
+    <input type="file" id="folder-input" webkitdirectory directory multiple>
+</div>
+
+<div class="box">
+    <b>Opción B — Pegar lista de nombres de archivo</b> (uno por línea; sirve si copiás la salida de <code>dir /b</code> o si el selector de carpeta no anda)<br><br>
+    <textarea id="paste-input" placeholder="001_---_Cambio de Frente_---_D1_UQX_7t.mp4&#10;001_---_Cambio de Frente_---_D1_UQX_8t.mp4&#10;..."></textarea><br><br>
+    <button class="secondary" id="parse-paste-btn">Procesar lista pegada</button>
+</div>
+
+<div class="box hidden" id="results-box">
+    <div class="grid4">
+        <div><div class="count" id="count-files">0</div><div class="count-label">archivos .mp4</div></div>
+        <div><div class="count" id="count-pairs">0</div><div class="count-label">tomas (pares 7t/8t)</div></div>
+        <div><div class="count" id="count-combos">0</div><div class="count-label">combos</div></div>
+        <div><div class="count" id="count-warnings">0</div><div class="count-label">avisos</div></div>
+    </div>
+
+    <div id="warnings-box" class="hidden" style="margin-top:16px;">
+        <b class="warn">⚠ Avisos</b> (archivos que no se pudieron interpretar del todo, o tomas sin su par 7t/8t):
+        <div id="warnings-list"></div>
+    </div>
+
+    <div style="margin-top:16px;">
+        <button id="download-btn">⬇ Descargar figuras-manifest.json</button>
+    </div>
 </div>
 
 <script>
-// ===== Parseo de nombres de archivo =====
-// Patrón esperado: {Posición Inicial}_{Figura}_{Posición Final}_{7t|8t}.mp4
-// "---" (o más guiones) = campo vacío. Un sufijo "-vN" o un 4to campo extra antes
-// del "_7t"/"_8t" es una TOMA alternativa de la misma combinación, no un valor distinto.
+const baseInput = document.getElementById('base-path');
+const folderInput = document.getElementById('folder-input');
+const pasteInput = document.getElementById('paste-input');
+const parsePasteBtn = document.getElementById('parse-paste-btn');
+const resultsBox = document.getElementById('results-box');
+const downloadBtn = document.getElementById('download-btn');
+const warningsBox = document.getElementById('warnings-box');
+const warningsList = document.getElementById('warnings-list');
 
-function normalizeField(raw) {
-    let s = raw.replace(/-v\d+$/i, '');
-    if (/^-{2,}$/.test(s) || /^-{2,}$/.test(raw)) return '';
-    return s.trim();
-}
+let lastManifest = null;
 
+// ===== PARSEO DE NOMBRES DE ARCHIVO =====
+// Reglas (deducidas comparando el manifest existente con los distintos
+// nombrados que fue teniendo el sistema, para que el resultado sea
+// idéntico al que ya venías generando):
+//
+// Formato viejo:    PosIni_Figura_PosFin_Dificultad[-Vn|_Vn]_Xt.mp4
+// Formato anterior: NNN_PosIni_Figura_PosFin_Dificultad[-Vn|_Vn]_COD_Xt.mp4
+// Formato actual:   NNN_Dificultad_PosIni_Figura_PosFin_COD_Xt.mp4
+//                    (mismo cuerpo de siempre, con un número de secuencia
+//                     y un código random agregados; la Dificultad puede
+//                     venir antes de PosIni o después de PosFin según la
+//                     versión)
+//
+// Estrategia: si el primer token es puramente numérico (secuencia), se le
+// saca ese primer token y el anteúltimo (código). Con lo que queda, se
+// busca en cualquier posición el token de Dificultad (algo que matchea
+// D + número, ej. "D3" o "D3-V2" del cual se toma sólo "D3"). Los 3
+// tokens restantes, en su mismo orden relativo, son siempre PosIni,
+// Figura y PosFin — no importa si la Dificultad estaba antes o después
+// de ellos. Cualquier variante (-V2, _V2, etc.) que venga pegada a la
+// Dificultad no la afecta: sólo hace que el archivo sea una "toma"
+// distinta dentro de esa dificultad.
+//   - velocidad = último token ("7t" u "8t")
 function parseFilename(filename) {
-    const m = filename.match(/^(.*)\.mp4$/i);
-    if (!m) return null;
-    const base = m[1];
-    const parts = base.split('_');
-    if (parts.length < 4) return null;
-    const take = parts[parts.length - 1].toLowerCase();
-    if (take !== '7t' && take !== '8t') return null;
-    const rest = parts.slice(0, -1);
-    if (rest.length !== 3 && rest.length !== 4) return null;
-    const [posIniRaw, figuraRaw, posFinRaw] = rest;
+    const stem = filename.replace(/\.mp4$/i, '');
+    let tokens = stem.split('_');
+    if (tokens.length < 4) return { error: 'Muy pocas partes en el nombre' };
+
+    let seq = null, code = null;
+    if (/^\d+$/.test(tokens[0]) && tokens.length >= 6) {
+        seq = tokens[0];
+        code = tokens[tokens.length - 2];
+        // sacamos la secuencia (índice 0) y el código (anteúltimo),
+        // dejando todo lo demás + la velocidad al final
+        tokens = tokens.slice(1, tokens.length - 2).concat([tokens[tokens.length - 1]]);
+    }
+
+    if (tokens.length < 4) return { error: 'Muy pocas partes tras sacar secuencia/código' };
+
+    const speed = tokens[tokens.length - 1];
+    if (!/^\d+t$/i.test(speed)) return { error: `Última parte "${speed}" no es una velocidad válida (se esperaba algo como "7t" u "8t")` };
+
+    const body = tokens.slice(0, -1); // todo menos la velocidad
+
+    // buscamos la Dificultad esté donde esté dentro del cuerpo
+    let dificultad = null, dificultadIdx = -1;
+    for (let i = 0; i < body.length; i++) {
+        const m = body[i].match(/^D(\d+)/i);
+        if (m) { dificultad = 'D' + m[1]; dificultadIdx = i; break; }
+    }
+    if (!dificultad) return { error: 'No se encontró una Dificultad (ej. "D1", "D2"...) en el nombre' };
+
+    // el resto de los tokens, sin el de Dificultad, mantiene su orden
+    // relativo: los primeros 3 son siempre PosIni, Figura, PosFin
+    // (cualquier token extra que quede después se ignora, igual que antes)
+    const posTokens = body.slice(0, dificultadIdx).concat(body.slice(dificultadIdx + 1));
+    if (posTokens.length < 3) return { error: 'Faltan PosIni/Figura/PosFin en el nombre' };
+
+    const norm = v => (v === '---' ? '' : v);
+
     return {
-        rawKey: rest.join('_'),
-        take,
-        posIni: normalizeField(posIniRaw),
-        figura: normalizeField(figuraRaw),
-        posFin: normalizeField(posFinRaw),
-        filename
+        posIni: norm(posTokens[0]),
+        figura: norm(posTokens[1]),
+        posFin: norm(posTokens[2]),
+        dificultad,
+        speed: speed.toLowerCase(),
+        seq, code,
+        // clave para emparejar 7t con 8t de la misma toma: el nombre completo
+        // sin el token final de velocidad
+        pairKey: tokens.slice(0, -1).join('_') + '||' + (seq !== null ? seq + '|' + code : '')
     };
 }
 
-function quitarAcentos(s) {
-    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-}
+// ===== ARMADO DEL MANIFEST =====
+function construirManifest(filenames, basePath) {
+    const warnings = [];
+    const parsedByPairKey = {}; // pairKey -> {7t: filename|null, 8t: filename|null, info}
 
-function construirManifest(archivosMp4, basePath) {
-    const noParseados = [];
-    const porRawKey = {};
+    filenames
+        .filter(f => /\.mp4$/i.test(f))
+        .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+        .forEach(filename => {
+            const p = parseFilename(filename);
+            if (p.error) {
+                warnings.push({ tipo: 'err', texto: `"${filename}": ${p.error}` });
+                return;
+            }
+            if (!parsedByPairKey[p.pairKey]) {
+                parsedByPairKey[p.pairKey] = { info: p, file7t: null, file8t: null };
+            }
+            if (p.speed === '7t') parsedByPairKey[p.pairKey].file7t = filename;
+            else if (p.speed === '8t') parsedByPairKey[p.pairKey].file8t = filename;
+        });
 
-    archivosMp4.forEach(filename => {
-        const p = parseFilename(filename);
-        if (!p) { noParseados.push(filename); return; }
-        if (!porRawKey[p.rawKey]) {
-            porRawKey[p.rawKey] = { posIni: p.posIni, figura: p.figura, posFin: p.posFin };
-        }
-        porRawKey[p.rawKey][p.take === '7t' ? 'file7t' : 'file8t'] = basePath + filename;
-    });
-
-    const variantesIncompletas = [];
-    const combosMap = {};
-    Object.keys(porRawKey).forEach(rawKey => {
-        const v = porRawKey[rawKey];
-        if (!v.file7t || !v.file8t) {
-            variantesIncompletas.push(rawKey + (v.file7t ? '_8t.mp4' : '_7t.mp4') + ' (falta el par 7t/8t)');
+    const tomas = [];
+    Object.values(parsedByPairKey).forEach(entry => {
+        if (!entry.file7t || !entry.file8t) {
+            const cual = entry.file7t || entry.file8t;
+            warnings.push({ tipo: 'warn', texto: `"${cual}" no tiene su par 7t/8t — se ignora esta toma` });
             return;
         }
-        const key = v.posIni + '\u0001' + v.figura + '\u0001' + v.posFin;
-        if (!combosMap[key]) combosMap[key] = { posIni: v.posIni, figura: v.figura, posFin: v.posFin, variantes: [] };
-        combosMap[key].variantes.push({ file7t: v.file7t, file8t: v.file8t });
+        tomas.push({
+            posIni: entry.info.posIni,
+            figura: entry.info.figura,
+            posFin: entry.info.posFin,
+            dificultad: entry.info.dificultad,
+            seq: entry.info.seq !== null && entry.info.seq !== undefined ? parseInt(entry.info.seq, 10) : null,
+            file7t: basePath + entry.file7t,
+            file8t: basePath + entry.file8t
+        });
     });
 
-    const combos = Object.values(combosMap)
-        .sort((a, b) => (a.figura || '').localeCompare(b.figura || '')
-            || (a.posIni || '').localeCompare(b.posIni || '')
-            || (a.posFin || '').localeCompare(b.posFin || ''))
-        .map((c, i) => ({ id: 'c' + i, ...c }));
-
-    const figuras = [...new Set(combos.map(c => c.figura).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    const posiciones = [...new Set(combos.flatMap(c => [c.posIni, c.posFin]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-
-    // Detección de posibles duplicados por tipeo/acentos/mayúsculas
-    function detectarPosiblesDuplicados(valores) {
-        const grupos = {};
-        valores.forEach(v => {
-            const k = quitarAcentos(v);
-            (grupos[k] = grupos[k] || []).push(v);
+    // Agrupar en combos por (posIni, figura, posFin)
+    const combosMap = new Map();
+    tomas.forEach(t => {
+        const key = t.posIni + '\u0001' + t.figura + '\u0001' + t.posFin;
+        if (!combosMap.has(key)) {
+            combosMap.set(key, { posIni: t.posIni, figura: t.figura, posFin: t.posFin, orden: null, dificultades: {} });
+        }
+        const combo = combosMap.get(key);
+        if (t.seq !== null && (combo.orden === null || t.seq < combo.orden)) combo.orden = t.seq;
+        if (!combo.dificultades[t.dificultad]) combo.dificultades[t.dificultad] = [];
+        combo.dificultades[t.dificultad].push({ file7t: t.file7t, file8t: t.file8t, _seq: t.seq });
+    });
+    // dentro de cada dificultad, las tomas quedan ordenadas por su número de
+    // secuencia (si lo tienen); se descarta el campo auxiliar _seq al final
+    combosMap.forEach(combo => {
+        Object.keys(combo.dificultades).forEach(d => {
+            combo.dificultades[d].sort((a, b) => (a._seq ?? Infinity) - (b._seq ?? Infinity));
+            combo.dificultades[d] = combo.dificultades[d].map(({ file7t, file8t }) => ({ file7t, file8t }));
         });
-        return Object.values(grupos).filter(g => new Set(g).size > 1);
-    }
-    const dupFiguras = detectarPosiblesDuplicados(figuras);
-    const dupPosiciones = detectarPosiblesDuplicados(posiciones);
+    });
 
-    return {
-        manifest: {
-            generatedAt: new Date().toISOString(),
-            basePath,
-            figuras,
-            posiciones,
-            combos
-        },
-        avisos: { noParseados, variantesIncompletas, dupFiguras, dupPosiciones }
+    // Orden por defecto: primero por el número de secuencia del nombre de
+    // archivo (el combo aparece en la posición del primer video que tuvo);
+    // los combos sin secuencia (formato viejo) van al final, ordenados como
+    // antes (alfabético por PosIni/Figura/PosFin).
+    const combos = [...combosMap.values()].sort((a, b) => {
+        if (a.orden !== null && b.orden !== null && a.orden !== b.orden) return a.orden - b.orden;
+        if (a.orden !== null && b.orden === null) return -1;
+        if (a.orden === null && b.orden !== null) return 1;
+        return (a.posIni || '').localeCompare(b.posIni || '', 'es')
+            || (a.figura || '').localeCompare(b.figura || '', 'es')
+            || (a.posFin || '').localeCompare(b.posFin || '', 'es');
+    });
+    combos.forEach((c, i) => { c.id = 'c' + i; });
+    // reordenar campos para que quede id primero, como en el manifest original
+    const combosOrdenados = combos.map(c => ({
+        id: c.id, posIni: c.posIni, figura: c.figura, posFin: c.posFin, orden: c.orden, dificultades: c.dificultades
+    }));
+
+    const figurasSet = new Set();
+    const posicionesSet = new Set();
+    const dificultadesSet = new Set();
+    combosOrdenados.forEach(c => {
+        if (c.figura) figurasSet.add(c.figura);
+        if (c.posIni) posicionesSet.add(c.posIni);
+        if (c.posFin) posicionesSet.add(c.posFin);
+        Object.keys(c.dificultades).forEach(d => dificultadesSet.add(d));
+    });
+
+    const collator = (a, b) => a.localeCompare(b, 'es');
+    const manifest = {
+        generatedAt: new Date().toISOString(),
+        basePath,
+        figuras: [...figurasSet].sort(collator),
+        posiciones: [...posicionesSet].sort(collator),
+        dificultades: [...dificultadesSet].sort((a, b) => parseInt(a.replace('D', '')) - parseInt(b.replace('D', ''))),
+        combos: combosOrdenados
     };
+
+    return { manifest, warnings, totalPares: tomas.length };
 }
 
 // ===== UI =====
-const folderInput = document.getElementById('folderInput');
-const folderName = document.getElementById('folderName');
-const resultado = document.getElementById('resultado');
-const avisosEl = document.getElementById('avisos');
-const descargarBtn = document.getElementById('descargarBtn');
-let manifestActual = null;
+function procesarArchivos(filenames) {
+    const basePath = baseInput.value.trim() || 'Figuras/';
+    const { manifest, warnings, totalPares } = construirManifest(filenames, basePath);
+    lastManifest = manifest;
+
+    document.getElementById('count-files').textContent = filenames.filter(f => /\.mp4$/i.test(f)).length;
+    document.getElementById('count-pairs').textContent = totalPares;
+    document.getElementById('count-combos').textContent = manifest.combos.length;
+    document.getElementById('count-warnings').textContent = warnings.length;
+
+    if (warnings.length) {
+        warningsBox.classList.remove('hidden');
+        warningsList.innerHTML = warnings.map(w => `<div class="${w.tipo}">• ${w.texto}</div>`).join('');
+    } else {
+        warningsBox.classList.add('hidden');
+    }
+
+    resultsBox.classList.remove('hidden');
+}
 
 folderInput.addEventListener('change', () => {
-    const files = Array.from(folderInput.files || []);
-    if (files.length === 0) return;
-
-    const carpetaRaiz = (files[0].webkitRelativePath || files[0].name).split('/')[0];
-    folderName.innerText = `📂 ${carpetaRaiz} — ${files.length} archivo(s) encontrados`;
-
-    const mp4s = files.filter(f => f.name.toLowerCase().endsWith('.mp4')).map(f => f.name);
-    const basePath = document.getElementById('basePath').value.trim() || 'Figuras/';
-    const { manifest, avisos } = construirManifest(mp4s, basePath.endsWith('/') ? basePath : basePath + '/');
-    manifestActual = manifest;
-
-    document.getElementById('numCombos').innerText = manifest.combos.length;
-    document.getElementById('numFiguras').innerText = manifest.figuras.length;
-    document.getElementById('numPosiciones').innerText = manifest.posiciones.length;
-    document.getElementById('comboCount').innerText = manifest.combos.length;
-
-    let avisosHtml = '';
-    if (avisos.noParseados.length > 0) {
-        avisosHtml += `<div class="aviso error"><b>${avisos.noParseados.length} archivo(s) no se pudieron interpretar</b> (no siguen el patrón Posición_Figura_Posición_7t|8t) y quedaron afuera:
-            <ul>${avisos.noParseados.slice(0, 15).map(f => `<li>${f}</li>`).join('')}</ul>
-            ${avisos.noParseados.length > 15 ? `<div>...y ${avisos.noParseados.length - 15} más.</div>` : ''}
-        </div>`;
-    }
-    if (avisos.variantesIncompletas.length > 0) {
-        avisosHtml += `<div class="aviso error"><b>${avisos.variantesIncompletas.length} toma(s) sin su par 7t/8t</b>, no se incluyeron:
-            <ul>${avisos.variantesIncompletas.slice(0, 15).map(f => `<li>${f}</li>`).join('')}</ul>
-        </div>`;
-    }
-    if (avisos.dupFiguras.length > 0) {
-        avisosHtml += `<div class="aviso"><b>Posibles figuras duplicadas por tipeo/acentos/mayúsculas</b> (revisá si son la misma):
-            <ul>${avisos.dupFiguras.map(g => `<li>${g.join('  vs.  ')}</li>`).join('')}</ul>
-        </div>`;
-    }
-    if (avisos.dupPosiciones.length > 0) {
-        avisosHtml += `<div class="aviso"><b>Posibles posiciones duplicadas por tipeo/acentos/mayúsculas</b> (revisá si son la misma):
-            <ul>${avisos.dupPosiciones.map(g => `<li>${g.join('  vs.  ')}</li>`).join('')}</ul>
-        </div>`;
-    }
-    if (avisosHtml === '') {
-        avisosHtml = `<div class="aviso" style="border-left-color: var(--ok);"><span class="ok-badge">✓ Todo se interpretó sin problemas.</span></div>`;
-    }
-    avisosEl.innerHTML = avisosHtml;
-
-    document.getElementById('tablaCombos').innerHTML = `
-        <table>
-            <thead><tr><th>Posición Inicial</th><th>Figura</th><th>Posición Final</th><th class="num">Tomas</th></tr></thead>
-            <tbody>
-                ${manifest.combos.map(c => `
-                    <tr>
-                        <td>${c.posIni || '<span style="color:var(--muted)">(vacío)</span>'}</td>
-                        <td>${c.figura || '<span style="color:var(--muted)">(vacío)</span>'}</td>
-                        <td>${c.posFin || '<span style="color:var(--muted)">(vacío)</span>'}</td>
-                        <td class="num">${c.variantes.length}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-
-    resultado.hidden = false;
-    descargarBtn.disabled = manifest.combos.length === 0;
+    const filenames = [...folderInput.files].map(f => f.name);
+    procesarArchivos(filenames);
 });
 
-descargarBtn.addEventListener('click', () => {
-    if (!manifestActual) return;
-    const blob = new Blob([JSON.stringify(manifestActual, null, 2)], { type: 'application/json' });
+parsePasteBtn.addEventListener('click', () => {
+    const filenames = pasteInput.value.split('\n').map(s => s.trim()).filter(Boolean);
+    procesarArchivos(filenames);
+});
+
+downloadBtn.addEventListener('click', () => {
+    if (!lastManifest) return;
+    const blob = new Blob([JSON.stringify(lastManifest, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'figuras-manifest.json';
-    document.body.appendChild(a);
     a.click();
-    a.remove();
     URL.revokeObjectURL(url);
 });
 </script>

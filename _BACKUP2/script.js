@@ -1,7 +1,237 @@
+// Mientras la pantalla está apagada o la app en segundo plano, el navegador
+// suele congelar la pestaña: los eventos que "pasaron" ahí (como un error de
+// red del audio) no se disparan al toque, sino recién cuando la pantalla
+// vuelve a encenderse — momento en el que document.hidden YA es false. Por
+// eso no alcanza con chequear document.hidden en el momento del error; hay
+// que recordar que "recién volvimos" y, durante una ventana corta después de
+// eso, seguir ignorando esos errores fantasma (el archivo en general está
+// bien cacheado, como se confirma recargando la página).
+window.__mediaErrorIgnoreUntil = 0;
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        window.__mediaErrorIgnoreUntil = Infinity; // mientras esté oculta, ignorar todo
+    } else {
+        window.__mediaErrorIgnoreUntil = Date.now() + 6000; // 6s de gracia al volver
+    }
+}, { capture: true });
+
 // ===== PWA SERVICE WORKER =====
+// Registra el SW y, una vez activo, dispara el cacheo de videos/canciones para
+// uso offline. Esto va DESPUÉS del install (no adentro), así una descarga larga
+// que se corta no tumba el registro entero — y la próxima vez que se abra la
+// página, retoma solo lo que falta (ver sw.js: cacheMissingUrls).
 if ('serviceWorker' in navigator) {
+
+    // ===== DIAGNÓSTICO EN PANTALLA (sin necesitar consola remota) =====
+    // Muestra en el banner cualquier error real de carga de video/audio,
+    // con la URL exacta que falló y el motivo — así vemos qué pasa sin
+    // depender de conectar el teléfono a una compu.
+    window.reportMediaError = function (kind, url, mediaError) {
+        // Ignora los errores "fantasma" de pantalla apagada / recién resumido
+        // (ver comentario arriba de __mediaErrorIgnoreUntil). Si el problema
+        // es real, va a volver a fallar una vez pasada la ventana de gracia.
+        if (document.hidden || Date.now() < window.__mediaErrorIgnoreUntil) return;
+
+        const banner = document.getElementById('offline-cache-banner');
+        const textEl = document.getElementById('offline-cache-text');
+        const barEl = document.getElementById('offline-cache-bar');
+        if (!banner || !textEl) return;
+        const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+        const codeName = mediaError ? (codes[mediaError.code] || mediaError.code) : '?';
+        banner.style.display = 'block';
+        if (barEl) barEl.style.width = '0%';
+        const errText = `Error (${kind}) [${codeName}]: ${url}`;
+        textEl.dataset.lastError = errText;
+        textEl.textContent = errText + ' — pidiendo detalle al SW...';
+        console.error(`Error de ${kind}`, codeName, url, mediaError);
+
+        // Pedile al SW que diga EXACTAMENTE qué tiene guardado para esta URL
+        // puntual (status, content-type, tamaño declarado vs tamaño real del
+        // blob) — así vemos el dato concreto en vez de seguir adivinando.
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'INSPECT_URL', url });
+        } else {
+            textEl.textContent = errText + ' (sin SW controller para inspeccionar)';
+        }
+    };
+
+    // Arma las URLs de TODOS los videos/canciones exactamente como las arma
+    // el reproductor (misma función safeUrl/encodeURI), para que lo que se
+    // cachea en el fondo haga match sí o sí con lo que se pide al reproducir.
+    // Antes el SW armaba estas URLs por su cuenta (sin encodeURI) y terminaban
+    // sin coincidir con las que realmente pide el navegador — por eso lo
+    // descargado en el fondo no servía offline, pero visitar a mano sí.
+    function getAllMediaUrlsForCache() {
+        const videoUrls = new Set();
+        for (const combo of combosData) {
+            for (const dif of Object.values(combo.dificultades || {})) {
+                for (const variante of dif) {
+                    if (variante.file7t) videoUrls.add(safeUrl(variante.file7t));
+                    if (variante.file8t) videoUrls.add(safeUrl(variante.file8t));
+                }
+            }
+        }
+        const songUrls = new Set();
+        for (const c of canciones) {
+            if (c.file) songUrls.add(safeUrl(c.file));
+        }
+        return { videoUrls: Array.from(videoUrls), songUrls: Array.from(songUrls) };
+    }
+
+    // Distingue una descarga PEDIDA A MANO (click en "Descargar" o tocando el
+    // banner para reintentar) de una que se retoma sola y en silencio al
+    // recargar la página. Solo la primera muestra el banner de progreso y el
+    // aviso final de "Listo — X MB guardados"; la segunda no muestra nada
+    // salvo que haya un error real.
+    let downloadTriggeredManually = false;
+
+    async function startMediaCaching(controller) {
+        if (!controller) return;
+        // Espera a que el manifest ya esté cargado (combosData poblado) antes
+        // de armar la lista — si no, iría vacía.
+        if (window.appReadyPromise) {
+            try { await window.appReadyPromise; } catch (e) { /* seguimos igual */ }
+        }
+        const { videoUrls, songUrls } = getAllMediaUrlsForCache();
+        controller.postMessage({ type: 'CACHE_MEDIA', videoUrls, songUrls });
+    }
+
+    function handleSwMessage(event) {
+        const data = event.data || {};
+        const banner = document.getElementById('offline-cache-banner');
+        const textEl = document.getElementById('offline-cache-text');
+        const barEl = document.getElementById('offline-cache-bar');
+        if (!banner || !textEl || !barEl) return;
+
+        if (data.type === 'sw-cache-progress' || data.type === 'sw-cache-done') {
+            if (!downloadTriggeredManually) return; // corriendo solo en silencio: no mostrar nada
+            delete textEl.dataset.lastError;
+            const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
+            banner.style.display = 'block';
+            barEl.style.width = pct + '%';
+
+            // Cada figura tiene 2 archivos (toma de 7 y de 8 tiempos), así que
+            // para "Figuras" mostramos el conteo dividido por 2, no el de archivos.
+            const isVideos = data.label === 'videos';
+            const shownDone = isVideos ? Math.floor(data.done / 2) : data.done;
+            const shownTotal = isVideos ? Math.floor(data.total / 2) : data.total;
+            const labelNice = isVideos ? 'Figuras' : 'Canciones';
+
+            let msg = `${labelNice}: ${shownDone}/${shownTotal}`;
+            if (data.failed) msg += ` (${data.failed} con error, tocá para reintentar)`;
+            textEl.textContent = msg;
+        } else if (data.type === 'sw-cache-error') {
+            banner.style.display = 'block';
+            textEl.textContent = `Error cacheando ${data.label} — tocá para reintentar`;
+        } else if (data.type === 'sw-cache-summary') {
+            // Llega al final de todo el proceso (videos + canciones). Mostramos
+            // cuánto quedó realmente guardado en el dispositivo — pero SOLO si
+            // esta corrida fue pedida a mano; si fue un retomado silencioso al
+            // recargar la página, no mostramos el aviso de "Listo".
+            if (downloadTriggeredManually) {
+                banner.style.display = 'block';
+                barEl.style.width = '100%';
+                if (data.usageMB != null) {
+                    textEl.textContent = `Listo — ${data.usageMB} MB guardados para uso offline`;
+                } else {
+                    textEl.textContent = 'Descarga offline completa';
+                }
+                setTimeout(() => { banner.style.display = 'none'; }, 7000);
+            } else {
+                banner.style.display = 'none';
+            }
+            downloadTriggeredManually = false;
+        } else if (data.type === 'sw-cache-status') {
+            // Respuesta a "mantener presionado el banner" — cuánto hay
+            // REALMENTE en el cache ahora mismo, sin descargar nada nuevo.
+            banner.style.display = 'block';
+            const v = data.videos || { done: 0, total: 0 };
+            const c = data.canciones || { done: 0, total: 0 };
+            textEl.textContent = `En cache ahora: Figuras ${Math.floor(v.done / 2)}/${Math.floor(v.total / 2)} · Canciones ${c.done}/${c.total}`;
+        } else if (data.type === 'sw-inspect-result') {
+            // Respuesta puntual a INSPECT_URL, disparada automáticamente
+            // cuando un video/audio falla — muestra qué hay REALMENTE
+            // guardado para esa URL exacta (o si ni siquiera está cacheada).
+            banner.style.display = 'block';
+            let detail;
+            if (!data.cached) {
+                detail = `NO está en cache${data.error ? ' (' + data.error + ')' : ''}`;
+            } else {
+                detail = `cache: status=${data.status} ct=${data.contentType || '?'} `
+                    + `content-length=${data.contentLength || '?'} content-range=${data.contentRange || '-'} `
+                    + `bytes reales=${data.actualBlobSize != null ? data.actualBlobSize : (data.blobReadError || '?')}`;
+            }
+            const prefix = textEl.dataset.lastError ? textEl.dataset.lastError + ' | ' : '';
+            textEl.textContent = prefix + detail;
+            console.error('[SW inspect]', data);
+        } else if (data.type === 'sw-fetch-error') {
+            // El SW tiró una excepción real al intentar servir este pedido
+            // (ej: serveRange falló) — esto antes se tragaba en silencio.
+            banner.style.display = 'block';
+            const prefix = textEl.dataset.lastError ? textEl.dataset.lastError + ' | ' : '';
+            textEl.textContent = `${prefix}SW error (${data.stage}): ${data.message} — range=${data.range || '-'} — ${data.url}`;
+            console.error('[SW fetch error]', data);
+        }
+    }
+
+    // Tocar el banner reintenta lo que haya fallado o quedado pendiente —
+    // esto también es una acción explícita del usuario, así que muestra el
+    // banner normalmente (incluido el aviso final de "Listo").
+    document.addEventListener('DOMContentLoaded', () => {
+        const banner = document.getElementById('offline-cache-banner');
+        if (banner) {
+            banner.addEventListener('click', () => {
+                downloadTriggeredManually = true;
+                startMediaCaching(navigator.serviceWorker.controller);
+            });
+        }
+    });
+
+    navigator.serviceWorker.addEventListener('message', handleSwMessage);
+
+    // La descarga para modo avión YA NO arranca sola al cargar la página —
+    // solo se dispara cuando el usuario toca "Descargar" en el menú (☰).
+    // Guardamos esa decisión en localStorage para que, si la descarga quedó
+    // a mitad de camino (se cerró la app, se cortó la conexión, etc.), la
+    // próxima vez que se abra la página se retome sola donde quedó — sin
+    // que el usuario tenga que volver a pedirla cada vez (pero en silencio,
+    // sin mostrar el banner ni el aviso de "Listo" otra vez).
+    const OFFLINE_DOWNLOAD_KEY = 'offlineDownloadRequested';
+
+    window.requestOfflineDownload = function () {
+        downloadTriggeredManually = true;
+        localStorage.setItem(OFFLINE_DOWNLOAD_KEY, '1');
+        if (navigator.serviceWorker.controller) {
+            startMediaCaching(navigator.serviceWorker.controller);
+        } else {
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                startMediaCaching(navigator.serviceWorker.controller);
+            }, { once: true });
+        }
+    };
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
+            .then(() => navigator.serviceWorker.ready)
+            .then(async () => {
+                // Pedile al navegador que NO borre el cache bajo presión de espacio
+                // (si no, Android puede vaciar los videos/canciones ya descargados).
+                if (navigator.storage && navigator.storage.persist) {
+                    try { await navigator.storage.persist(); } catch (e) { /* no crítico */ }
+                }
+                // Solo retomamos la descarga automáticamente si el usuario ya la
+                // había pedido antes alguna vez. Si nunca la pidió, no se toca
+                // la red hasta que la pida desde el menú.
+                if (localStorage.getItem(OFFLINE_DOWNLOAD_KEY) === '1') {
+                    if (navigator.serviceWorker.controller) {
+                        startMediaCaching(navigator.serviceWorker.controller);
+                    } else {
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            startMediaCaching(navigator.serviceWorker.controller);
+                        }, { once: true });
+                    }
+                }
+            })
             .catch(err => console.error('Error al registrar SW', err));
     });
 }
@@ -57,6 +287,54 @@ let comboByKey = {};       // id -> combo
 let figurasData = {};      // id -> {D1:[...], D2:[...], ...}
 let figurasUnicas = [];    // lista de valores de "figura" distintos, ordenada
 let posicionesUnicas = []; // lista de valores de posición (inicial o final) distintos
+
+// ===== CÓDIGOS CORTOS DE POSICIÓN (botones de encadenar, ver más abajo) =====
+// Para cada Posición se arma un código corto (ej. "Posición Abierta Relajada
+// Paralelas al Aire 2" -> "PARPaA2"): primera letra de cada palabra
+// significativa (se saltean conectores como "al"/"en"), números tal cual.
+// El mapa palabra->código se arma UNA sola vez con TODAS las Posiciones
+// existentes (construirMapaCodigosPosicion), en el orden en que aparecen: si
+// dos palabras distintas empezarían con la misma letra, la que aparece
+// después se alarga a 2 (o más) letras para no repetirla.
+const POSICION_CODE_STOPWORDS = new Set(['al', 'en', 'de', 'del', 'la', 'el', 'los', 'las', 'sin', 'con', 'y', 'a']);
+let posicionCodeMap = {};
+let posicionCodeCache = {};
+
+function construirMapaCodigosPosicion(posiciones) {
+    posicionCodeMap = {};
+    posicionCodeCache = {};
+    const codigosUsados = new Set();
+    posiciones.forEach(nombre => {
+        if (!nombre) return;
+        nombre.split(/\s+/).forEach(palabra => {
+            const clave = palabra.toLowerCase();
+            if (posicionCodeMap[clave] !== undefined) return; // palabra ya vista
+            if (/^\d+$/.test(palabra)) return; // los números no llevan código propio
+            if (POSICION_CODE_STOPWORDS.has(clave)) return; // conector, se saltea
+            let longitud = 1;
+            let candidato = palabra.slice(0, longitud).toLowerCase();
+            while (codigosUsados.has(candidato) && longitud < palabra.length) {
+                longitud++;
+                candidato = palabra.slice(0, longitud).toLowerCase();
+            }
+            codigosUsados.add(candidato);
+            posicionCodeMap[clave] = candidato.charAt(0).toUpperCase() + candidato.slice(1);
+        });
+    });
+}
+
+function codigoDePosicion(nombre) {
+    if (typeof nombre !== 'string' || nombre === '') return '---';
+    if (posicionCodeCache[nombre] !== undefined) return posicionCodeCache[nombre];
+    const codigo = nombre.split(/\s+/).map(palabra => {
+        if (/^\d+$/.test(palabra)) return palabra;
+        const clave = palabra.toLowerCase();
+        if (POSICION_CODE_STOPWORDS.has(clave)) return '';
+        return posicionCodeMap[clave] || palabra.charAt(0).toUpperCase();
+    }).join('');
+    posicionCodeCache[nombre] = codigo;
+    return codigo;
+}
 let dificultadesUnicas = []; // lista de niveles de dificultad distintos (D1, D2, ...), ordenada
 
 // Filtros activos de los 4 desplegables. null = "cualquiera" (sin filtrar esa dimensión).
@@ -64,6 +342,28 @@ let filterFigura = null;
 let filterPosIni = null;
 let filterPosFin = null;
 let filterDificultad = null;
+
+// Toggles "I" (Individuales) y "C" (Combos) del desplegable de Figura:
+// controlan qué categoría de tomas existe en TODA la app (no solo en el
+// desplegable), igual que cualquier otro filtro.
+// - mostrarCombos ("C"): si está activo se muestran las tomas cuya Figura
+//   combina varios movimientos ("A + B"); si se desactiva, esas tomas se
+//   ocultan del todo.
+// - mostrarFigurasIndividuales ("I"): si está activo se muestran las tomas
+//   cuya Figura es un solo movimiento (sin "+"); si se desactiva, esas
+//   tomas se ocultan del todo.
+// Ambos activados por defecto al cargar la página (si algún día se
+// desactivaran los dos a la vez, no quedaría ninguna toma para mostrar).
+// Persistidos igual que el resto de preferencias de la app.
+let mostrarCombos = (localStorage.getItem('mostrarCombos') !== '0');
+let mostrarFigurasIndividuales = (localStorage.getItem('mostrarFigurasIndividuales') !== '0');
+
+// Toggle "=" entre Posición Inicial y Posición Final: igual concepto que los
+// toggles "I"/"C" de arriba (interruptor de visibilidad de toda la app, no
+// una dimensión de filtro más). Si está activo, sólo existen en toda la app
+// las tomas cuya Posición Inicial y Posición Final sean exactamente la
+// misma. Desactivado por defecto (a diferencia de "I"/"C").
+let filtroPosIgual = (localStorage.getItem('filtroPosIgual') === '1');
 
 // Muchas figuras son "compuestas" (ej. "Gancho + Traslado": son dos
 // movimientos hechos seguidos). Para que el filtro de Figura las encuentre
@@ -89,10 +389,31 @@ function comboCoincideFigura(combo, valor) {
 // una dimensión (para calcular las OPCIONES de esa misma dimensión sin que se
 // autofiltre a sí misma).
 function combosFiltrados(excluirDimension) {
+    // Con "=" activado, Posición Inicial y Posición Final quedan atadas como
+    // si fueran una sola dimensión: al calcular las opciones disponibles
+    // para CUALQUIERA de las dos, hay que ignorar el filtro de las DOS (no
+    // sólo el de la que se está calculando) — si no, la otra ya fijada al
+    // mismo valor sólo dejaría ver esa misma igualdad y "Cualquiera".
+    const excluirPosIni = excluirDimension === 'posIni' || (filtroPosIgual && excluirDimension === 'posFin');
+    const excluirPosFin = excluirDimension === 'posFin' || (filtroPosIgual && excluirDimension === 'posIni');
     return combosData.filter(c => {
+        // Toggles "I"/"C": no respetan 'excluirDimension' (igual que los
+        // demás filtros no lo hacen para SU propia dimensión) porque no son
+        // una dimensión de filtro más: son un interruptor de visibilidad
+        // que aplica siempre, en toda la app.
+        if (typeof c.figura === 'string') {
+            const esCombo = c.figura.includes('+');
+            if (esCombo && !mostrarCombos) return false;
+            if (!esCombo && !mostrarFigurasIndividuales) return false;
+        }
+        // Toggle "=": igual que "I"/"C", aplica siempre en toda la app, sin
+        // importar 'excluirDimension' (así los desplegables de Posición
+        // Inicial/Final también quedan reducidos a las posiciones que
+        // cumplen esta condición).
+        if (filtroPosIgual && c.posIni !== c.posFin) return false;
         if (excluirDimension !== 'figura' && filterFigura !== null && !comboCoincideFigura(c, filterFigura)) return false;
-        if (excluirDimension !== 'posIni' && filterPosIni !== null && c.posIni !== filterPosIni) return false;
-        if (excluirDimension !== 'posFin' && filterPosFin !== null && c.posFin !== filterPosFin) return false;
+        if (!excluirPosIni && filterPosIni !== null && c.posIni !== filterPosIni) return false;
+        if (!excluirPosFin && filterPosFin !== null && c.posFin !== filterPosFin) return false;
         if (excluirDimension !== 'dificultad' && filterDificultad !== null && !(c.dificultades && c.dificultades[filterDificultad] && c.dificultades[filterDificultad].length)) return false;
         return true;
     });
@@ -154,7 +475,17 @@ function recalcularComboActual() {
         filterPosIni = null;
         filterPosFin = null;
         filterDificultad = null;
-        candidatos = combosData.slice();
+        // OJO: acá antes se usaba combosData.slice() a secas, ignorando los
+        // toggles "I"/"C". Si el usuario los desactivó a los dos a la vez
+        // (no queda ninguna toma: ni Combos ni Figuras individuales), no
+        // hay que volver a mostrar TODO como si nada: se respeta esa
+        // elección y directamente no hay nada para mostrar.
+        candidatos = combosFiltrados(null);
+        if (candidatos.length === 0) {
+            actualizarEtiquetasFiltros(candidatos);
+            actualizarPaginacion();
+            return;
+        }
     }
     candidatos = candidatos.slice().sort(compararCombos);
     actualizarEtiquetasFiltros(candidatos);
@@ -181,9 +512,23 @@ function recalcularComboActual() {
 // Final: así el orden de "Movimiento 1, 2, 3..." al cargar la página (o al
 // navegar sin filtros) coincide con el orden alfabético de los archivos.
 function compararCombos(a, b) {
+    const ordenA = (a.orden ?? null);
+    const ordenB = (b.orden ?? null);
+    if (ordenA !== null && ordenB !== null && ordenA !== ordenB) return ordenA - ordenB;
+    if (ordenA !== null && ordenB === null) return -1;
+    if (ordenA === null && ordenB !== null) return 1;
     return (a.posIni || '').localeCompare(b.posIni || '')
         || (a.figura || '').localeCompare(b.figura || '')
         || (a.posFin || '').localeCompare(b.posFin || '');
+}
+
+// Pone el contenido de un "-selected" (fig/ver/posini/posfin/song) SIEMPRE
+// envuelto en un span propio (.dropdown-label-text). Así el texto se recorta
+// con "..." dentro de ese span (que tiene su propio min-width:0) en vez de
+// empujar o tapar la flechita del desplegable (background-image del padre),
+// que queda siempre limpia sin importar cuán largo sea el texto.
+function setDropdownSelectedHTML(elId, innerHtml) {
+    document.getElementById(elId).innerHTML = `<span class="dropdown-label-text">${innerHtml}</span>`;
 }
 
 // Actualiza el texto de los 3 desplegables. Si una dimensión no tiene filtro propio
@@ -196,7 +541,6 @@ function actualizarEtiquetasFiltros(candidatos) {
         return set.size === 1 ? [...set][0] : null;
     };
 
-    const figEl = document.getElementById('fig-selected');
     // El label de Figura sólo muestra un nombre si el usuario lo eligió
     // explícitamente (filterFigura !== null). Antes se "autocompletaba" con
     // valorUnico('figura') cuando, al filtrar por Posición Inicial/Final,
@@ -205,20 +549,18 @@ function actualizarEtiquetasFiltros(candidatos) {
     // el usuario la elija a propósito. filterFigura === "" es una selección
     // real y explícita (las figuras "sin nombre"), se muestra como "---".
     if (filterFigura === null) {
-        figEl.innerHTML = `💃 Cualquier Figura [🌈]`;
+        setDropdownSelectedHTML('fig-selected', `💃 Cualquier Figura [🌈]`);
     } else {
-        figEl.innerHTML = `💃 ${filterFigura === '' ? '---' : filterFigura}`;
+        setDropdownSelectedHTML('fig-selected', `💃 ${filterFigura === '' ? '---' : filterFigura}`);
     }
 
-    const posIniEl = document.getElementById('posini-selected');
-    posIniEl.innerHTML = (filterPosIni === null)
+    setDropdownSelectedHTML('posini-selected', (filterPosIni === null)
         ? `<span class="pos-dot pos-dot-ini"></span>Cualquier Posición Inicial [🌈]`
-        : `<span class="pos-dot pos-dot-ini"></span>${filterPosIni === '' ? '---' : filterPosIni}`;
+        : `<span class="pos-dot pos-dot-ini"></span>${filterPosIni === '' ? '---' : filterPosIni}`);
 
-    const posFinEl = document.getElementById('posfin-selected');
-    posFinEl.innerHTML = (filterPosFin === null)
+    setDropdownSelectedHTML('posfin-selected', (filterPosFin === null)
         ? `<span class="pos-dot pos-dot-fin"></span>Cualquier Posición Final [🌈]`
-        : `<span class="pos-dot pos-dot-fin"></span>${filterPosFin === '' ? '---' : filterPosFin}`;
+        : `<span class="pos-dot pos-dot-fin"></span>${filterPosFin === '' ? '---' : filterPosFin}`);
 }
 
 // Carga figuras-manifest.json (generado con generar-manifest.html) y arranca la app.
@@ -235,6 +577,7 @@ async function iniciarApp() {
             .sort((a, b) => (a === '' ? '---' : a).localeCompare(b === '' ? '---' : b));
         posicionesUnicas = [...new Set(combosData.flatMap(c => [c.posIni, c.posFin]).filter(Boolean))]
             .sort((a, b) => a.localeCompare(b));
+        construirMapaCodigosPosicion(posicionesUnicas);
         dificultadesUnicas = [...new Set(combosData.flatMap(c => Object.keys(c.dificultades || {})))]
             .sort((a, b) => parseInt(a.replace('D', '')) - parseInt(b.replace('D', '')));
     } catch (err) {
@@ -304,8 +647,14 @@ let currentSongValue = "";
 let currentDificultadValue = "D1";
 let currentVariantIndex = 0; // qué toma (variante) dentro de figurasData[fig][niv] se está mostrando
 let loadSequence = 0;
+// Toggle "T": muestra un cartel extra debajo de Posición Final con el número
+// inicial y las 3 letras finales del archivo de video correspondiente.
+let mostrarTitulo = (localStorage.getItem('mostrarTitulo') !== '0');
 
 const audioPlayer = document.getElementById('audio-player');
+audioPlayer.addEventListener('error', () => {
+    if (window.reportMediaError) window.reportMediaError('audio', audioPlayer.src, audioPlayer.error);
+});
 const rateInput = document.getElementById('rate-input');
 const bpmLabel = document.getElementById('calc-bpm-label');
 const playBtn = document.getElementById('play-btn');
@@ -315,8 +664,21 @@ const prevPageBtn = document.getElementById('prev-page-btn');
 const nextPageBtn = document.getElementById('next-page-btn');
 const pageIndicator = document.getElementById('page-indicator');
 const videoGridWrapper = document.getElementById('video-grid-wrapper');
+const videoPrevBtn = document.getElementById('video-prev-btn');
+const videoNextBtn = document.getElementById('video-next-btn');
 
 function safeUrl(path) { return encodeURI(path); }
+
+// Extrae del nombre de archivo (ej. "Figuras/028_..._D3_UQX_8t.mp4") el
+// número del principio ("028") y las 3 letras del final ("UQX"), para
+// mostrarlos en el cartel opcional del toggle "T".
+function extraerInfoArchivo(filePath) {
+    if (!filePath) return null;
+    const nombre = filePath.split('/').pop();
+    const match = nombre.match(/^(\d+)_.*_([A-Za-z]{3})_\d+t\.[^.]+$/);
+    if (!match) return null;
+    return { numero: match[1], letras: match[2] };
+}
 
 // Safari/iOS resetea silenciosamente playbackRate a 1.0 cuando un <video>
 // termina de cargar metadata o arranca a reproducir, aunque ya lo hayas seteado antes.
@@ -355,7 +717,7 @@ function forzarPrimeraCancionYReiniciar() {
     if (!primera) return;
     currentSongValue = primera.file;
     localStorage.setItem('lastSong', currentSongValue);
-    document.getElementById('song-selected').innerText = `🎧 ${primera.name} [${primera.bpm} BPM]`;
+    setDropdownSelectedHTML('song-selected', `🎧 ${primera.name} [${primera.bpm} BPM]`);
     const sortActive = document.getElementById('sort-abc').classList.contains('active') ? 'abc' : 'bpm';
     renderSongList(document.getElementById('song-search').value, sortActive);
     prepararFuentes();
@@ -369,6 +731,19 @@ function forzarPrimeraCancionYReiniciar() {
 // contenga a todas (hasta 4x4 = 16). Si esa dificultad tiene más tomas de las
 // que entran en la grilla más grande, las sobrantes no se muestran.
 function renderGrid() {
+    // Si no hay ningún Movimiento que cumpla los filtros/toggles activos
+    // (por ejemplo, "I" y "C" desactivados a la vez), se muestra un aviso
+    // en vez de dejar la grilla vacía o con el último video que quedó.
+    const pasosActuales = construirPasosFiltrados();
+    if (pasosActuales.length === 0) {
+        videoGridWrapper.innerHTML = '';
+        const aviso = document.createElement('div');
+        aviso.id = 'sin-movimientos-aviso';
+        aviso.innerText = 'No hay Movimientos para mostrar';
+        videoGridWrapper.appendChild(aviso);
+        return;
+    }
+
     const fig = currentFigureValue;
     const niv = currentDificultadValue;
     if (!fig || !niv || !figurasData[fig] || !figurasData[fig][niv]) return;
@@ -387,7 +762,6 @@ function renderGrid() {
 
     // Número de página real (1-based) dentro del total de tomas filtradas,
     // para que "Movimiento X" coincida con el contador de arriba (1/101, etc.).
-    const pasosActuales = construirPasosFiltrados();
     let idxPasoActual = indicePasoActual(pasosActuales);
     if (idxPasoActual === -1) idxPasoActual = 0;
     const numeroMovimiento = idxPasoActual + 1;
@@ -405,7 +779,7 @@ function renderGrid() {
 
         const label = document.createElement('div');
         label.className = 'movement-label';
-        label.innerText = `Movimiento ${numeroMovimiento}`;
+        label.innerText = `Movimiento ${numeroMovimiento}/${pasosActuales.length}`;
         cell.appendChild(label);
 
         // ===== OVERLAY CENTRAL: Figura / Posición Inicial / Posición Final =====
@@ -420,26 +794,73 @@ function renderGrid() {
         centerOverlay.className = 'figure-center-overlay';
 
         const dificultadBadge = document.createElement('div');
-        dificultadBadge.className = 'info-badge info-badge-dificultad';
+        dificultadBadge.className = `info-badge info-badge-dificultad${filterDificultad !== null ? ' info-badge-filtro-activo' : ''}`;
         dificultadBadge.innerText = mostrarValor(niv);
+        dificultadBadge.title = 'Fijar / quitar filtro de Dificultad';
+        dificultadBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('dificultad'); };
         centerOverlay.appendChild(dificultadBadge);
 
         const posIniBadge = document.createElement('div');
-        posIniBadge.className = 'info-badge info-badge-posini';
+        posIniBadge.className = `info-badge info-badge-posini${filterPosIni !== null ? ' info-badge-filtro-activo' : ''}`;
         posIniBadge.innerText = mostrarValor(comboActual.posIni);
+        posIniBadge.title = 'Fijar / quitar filtro de Posición Inicial';
+        posIniBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('posIni'); };
         centerOverlay.appendChild(posIniBadge);
 
         const figuraBadge = document.createElement('div');
-        figuraBadge.className = 'info-badge info-badge-figura';
+        figuraBadge.className = `info-badge info-badge-figura${filterFigura !== null ? ' info-badge-filtro-activo' : ''}`;
         figuraBadge.innerText = mostrarValor(comboActual.figura);
+        figuraBadge.title = 'Fijar / quitar filtro de Figura';
+        figuraBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('figura'); };
         centerOverlay.appendChild(figuraBadge);
 
         const posFinBadge = document.createElement('div');
-        posFinBadge.className = 'info-badge info-badge-posfin';
+        posFinBadge.className = `info-badge info-badge-posfin${filterPosFin !== null ? ' info-badge-filtro-activo' : ''}`;
         posFinBadge.innerText = mostrarValor(comboActual.posFin);
+        posFinBadge.title = 'Fijar / quitar filtro de Posición Final';
+        posFinBadge.onclick = (e) => { e.stopPropagation(); fijarFiltroDesdeVideoActual('posFin'); };
         centerOverlay.appendChild(posFinBadge);
 
         cell.appendChild(centerOverlay);
+
+        // ===== CÍRCULOS DE FIGURA: uno por cada parte (o uno solo si es
+        // singular) =====
+        // Si la Figura del video actual es singular, un solo círculo con su
+        // primera letra. Si es compuesta ("A + B"), un círculo por cada
+        // parte, cada uno con la primera letra de esa parte. Clickear cada
+        // uno fija/quita el filtro de Figura con ese componente puntual.
+        if (typeof comboActual.figura === 'string' && comboActual.figura !== '') {
+            const partesFigura = componentesDeFigura(comboActual.figura);
+            const grupoCirculosFigura = document.createElement('div');
+            grupoCirculosFigura.className = 'figura-circle-group';
+            partesFigura.forEach(parte => {
+                const circuloFigura = document.createElement('button');
+                circuloFigura.className = `figura-circle${filterFigura === parte ? ' figura-circle-activo' : ''}`;
+                circuloFigura.innerText = parte.charAt(0).toUpperCase();
+                circuloFigura.title = `Fijar / quitar filtro de Figura: ${parte}`;
+                circuloFigura.onclick = (e) => { e.stopPropagation(); fijarFiltroFiguraComponente(parte); };
+                grupoCirculosFigura.appendChild(circuloFigura);
+            });
+            cell.appendChild(grupoCirculosFigura);
+        }
+
+        // Cartel opcional (toggle "T"): el código identificador del archivo de
+        // video actual, partido en 2 y a la misma altura que "Movimiento X/X"
+        // (arriba del video): el número a la izquierda, las 3 letras a la derecha.
+        if (mostrarTitulo) {
+            const infoArchivo = extraerInfoArchivo(item.file8t);
+            if (infoArchivo) {
+                const badgeNumero = document.createElement('div');
+                badgeNumero.className = 'titulo-side-badge titulo-side-left';
+                badgeNumero.innerText = infoArchivo.numero;
+                cell.appendChild(badgeNumero);
+
+                const badgeLetras = document.createElement('div');
+                badgeLetras.className = 'titulo-side-badge titulo-side-right';
+                badgeLetras.innerText = infoArchivo.letras;
+                cell.appendChild(badgeLetras);
+            }
+        }
 
         const vid8t = document.createElement('video');
         vid8t.className = 'vid-visible';
@@ -447,7 +868,15 @@ function renderGrid() {
         vid8t.playsInline = true;
         vid8t.preload = 'auto';
         vid8t.dataset.role = 'main';
+        // Necesario para que el Service Worker pueda interceptar y servir
+        // bien este pedido (sobre todo los que llevan header Range) — sin
+        // esto, el video puede quedarse esperando red aunque ya esté cacheado.
+        // (crossOrigin='anonymous' se probó acá y se sacó: como la respuesta
+        // la arma el Service Worker a mano para servir Range, el navegador
+        // terminaba rechazándola por CORS — SRC_NOT_SUPPORTED — en vez de
+        // aceptarla. Mismo origen no lo necesita.)
         vid8t.src = safeUrl(item.file8t);
+        vid8t.addEventListener('error', () => window.reportMediaError('video8t', vid8t.src, vid8t.error));
 
         const vid7t = document.createElement('video');
         vid7t.className = 'vid-hidden';
@@ -457,6 +886,7 @@ function renderGrid() {
         vid7t.loop = true;
         vid7t.dataset.role = 'loop';
         vid7t.src = safeUrl(item.file7t);
+        vid7t.addEventListener('error', () => window.reportMediaError('video7t', vid7t.src, vid7t.error));
 
         vid8t.addEventListener('ended', () => {
             vid8t.className = 'vid-hidden';
@@ -514,8 +944,9 @@ function renderFigureList(searchTerm = "") {
         valorSet.add(c.figura);
         componentesDeFigura(c.figura).forEach(p => valorSet.add(p));
     });
+    const terminoNormalizado = normalizarTexto(searchTerm).trim();
     const valores = [...valorSet]
-        .filter(f => etiquetaFigura(f).toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(f => normalizarTexto(etiquetaFigura(f)).includes(terminoNormalizado))
         .sort((a, b) => etiquetaFigura(a).localeCompare(etiquetaFigura(b)));
 
     // El ítem "Cualquier Figura" usa data-any="1" (en vez de data-value="")
@@ -537,6 +968,7 @@ function renderFigureList(searchTerm = "") {
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -545,8 +977,9 @@ function renderPosIniList(searchTerm = "") {
     const listEl = document.getElementById('posini-list');
     const candidatos = combosFiltrados('posIni');
     const etiquetaPos = (p) => (p === '' ? '---' : p);
+    const terminoNormalizadoIni = normalizarTexto(searchTerm).trim();
     const valores = [...new Set(candidatos.map(c => c.posIni).filter(v => typeof v === 'string'))]
-        .filter(p => etiquetaPos(p).toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(p => normalizarTexto(etiquetaPos(p)).includes(terminoNormalizadoIni))
         .sort((a, b) => etiquetaPos(a).localeCompare(etiquetaPos(b)));
 
     // "Cualquier Posición Inicial" usa data-any="1" (en vez de data-value="")
@@ -562,10 +995,14 @@ function renderPosIniList(searchTerm = "") {
     listEl.querySelectorAll('.dropdown-item').forEach(item => {
         item.onclick = () => {
             filterPosIni = item.dataset.any === '1' ? null : item.dataset.value;
+            // Con "=" activado, Posición Inicial y Final van siempre atadas:
+            // al elegir una, la otra pasa a valer exactamente lo mismo.
+            if (filtroPosIgual) filterPosFin = filterPosIni;
             ultimaDimensionSeleccionada = 'posIni';
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -574,8 +1011,9 @@ function renderPosFinList(searchTerm = "") {
     const listEl = document.getElementById('posfin-list');
     const candidatos = combosFiltrados('posFin');
     const etiquetaPos = (p) => (p === '' ? '---' : p);
+    const terminoNormalizadoFin = normalizarTexto(searchTerm).trim();
     const valores = [...new Set(candidatos.map(c => c.posFin).filter(v => typeof v === 'string'))]
-        .filter(p => etiquetaPos(p).toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(p => normalizarTexto(etiquetaPos(p)).includes(terminoNormalizadoFin))
         .sort((a, b) => etiquetaPos(a).localeCompare(etiquetaPos(b)));
 
     let html = `<div class="dropdown-item ${filterPosFin === null ? 'selected' : ''}" data-any="1"><span class="pos-dot pos-dot-fin"></span>Cualquier Posición Final [🌈]</div>`;
@@ -588,10 +1026,14 @@ function renderPosFinList(searchTerm = "") {
     listEl.querySelectorAll('.dropdown-item').forEach(item => {
         item.onclick = () => {
             filterPosFin = item.dataset.any === '1' ? null : item.dataset.value;
+            // Idem: con "=" activado, fijar Posición Final también fija la
+            // Posición Inicial al mismo valor.
+            if (filtroPosIgual) filterPosIni = filterPosFin;
             ultimaDimensionSeleccionada = 'posFin';
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -635,7 +1077,7 @@ function renderSongList(searchTerm = "", sortType = "abc") {
         item.onclick = () => {
             currentSongValue = item.dataset.value;
             localStorage.setItem('lastSong', currentSongValue);
-            document.getElementById('song-selected').innerText = item.innerText;
+            setDropdownSelectedHTML('song-selected', item.innerHTML);
             closeAllDropdowns();
             if (isPlaying || !isFirstAction) mutearParaCarga();
             audioPlayer.pause();
@@ -670,6 +1112,7 @@ function renderDificultadList() {
             closeAllDropdowns();
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
         };
     });
 }
@@ -680,6 +1123,16 @@ function closeAllDropdowns() {
     document.getElementById('ver-options-panel').style.display = 'none';
     document.getElementById('posini-options-panel').style.display = 'none';
     document.getElementById('posfin-options-panel').style.display = 'none';
+    document.getElementById('menu-options-panel').style.display = 'none';
+    document.getElementById('movsearch-options-panel').style.display = 'none';
+
+    // Al cerrarse (desclickeado) cualquiera de los desplegables con buscador,
+    // se borra lo que había escrito ahí, para que la próxima vez que se abra
+    // arranque limpio en vez de seguir filtrado por la búsqueda anterior.
+    ['fig-search', 'posini-search', 'posfin-search', 'song-search', 'movsearch-search'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = '';
+    });
 }
 
 // Si el panel pasado ya estaba abierto, clickear su mismo botón lo cierra
@@ -692,6 +1145,63 @@ function toggleDropdown(panelId, openFn) {
         panel.style.display = 'flex';
         if (openFn) openFn();
     }
+}
+
+// ===== NAVEGACIÓN POR TECLADO DENTRO DE UN DESPLEGABLE ABIERTO =====
+// Mapa panel -> lista, para saber cuál está abierto y sobre qué lista mover
+// el resaltado con Flecha Arriba / Flecha Abajo, y confirmar con Enter.
+const DROPDOWN_PANEL_TO_LIST = {
+    'fig-options-panel': 'fig-list',
+    'posini-options-panel': 'posini-list',
+    'posfin-options-panel': 'posfin-list',
+    'ver-options-panel': 'ver-list',
+    'song-options-panel': 'song-list',
+    'movsearch-options-panel': 'movsearch-list',
+};
+
+// Devuelve {panelId, listId} del desplegable de filtro/canción que esté
+// abierto en este momento, o null si ninguno lo está.
+function getOpenDropdown() {
+    for (const panelId in DROPDOWN_PANEL_TO_LIST) {
+        const panel = document.getElementById(panelId);
+        if (panel && panel.style.display === 'flex') {
+            return { panelId, listId: DROPDOWN_PANEL_TO_LIST[panelId] };
+        }
+    }
+    return null;
+}
+
+// Mueve el resaltado (sin todavía aplicar el filtro) un paso hacia arriba o
+// abajo dentro de la lista indicada. Si no había nada resaltado, arranca
+// desde el ítem ya "seleccionado" (el filtro activo) para que la primera
+// flecha mueva hacia un lado coherente en vez de saltar a un extremo.
+function navigateDropdownHighlight(listId, direccion) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    const items = Array.from(list.querySelectorAll('.dropdown-item'));
+    if (items.length === 0) return;
+
+    let idx = items.findIndex(it => it.classList.contains('kbd-highlight'));
+    if (idx === -1) {
+        const idxSeleccionado = items.findIndex(it => it.classList.contains('selected'));
+        idx = idxSeleccionado !== -1 ? idxSeleccionado : (direccion > 0 ? -1 : 0);
+    }
+    items.forEach(it => it.classList.remove('kbd-highlight'));
+
+    idx += direccion;
+    if (idx < 0) idx = items.length - 1;
+    if (idx >= items.length) idx = 0;
+
+    items[idx].classList.add('kbd-highlight');
+    items[idx].scrollIntoView({ block: 'nearest' });
+}
+
+// Enter: confirma (clickea) el ítem resaltado por teclado, si hay alguno.
+function confirmDropdownHighlight(listId) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    const resaltado = list.querySelector('.dropdown-item.kbd-highlight');
+    if (resaltado) resaltado.click();
 }
 
 document.getElementById('posini-selected').onclick = (e) => {
@@ -745,6 +1255,50 @@ document.getElementById('fig-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
+};
+// ===== TOGGLES "I" (Individuales) Y "C" (Combos) DE FIGURA =====
+// Los dos filtran qué tomas existen en toda la app (no solo el
+// desplegable de Figura), así que ambos recalculan todo igual que al
+// cambiar cualquier otro filtro (puede hacer que el combo actualmente
+// mostrado deje de existir).
+document.getElementById('fig-individualizar-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    mostrarFigurasIndividuales = !mostrarFigurasIndividuales;
+    localStorage.setItem('mostrarFigurasIndividuales', mostrarFigurasIndividuales ? '1' : '0');
+    document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
+    renderFigureList(document.getElementById('fig-search').value);
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+};
+document.getElementById('fig-combos-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    mostrarCombos = !mostrarCombos;
+    localStorage.setItem('mostrarCombos', mostrarCombos ? '1' : '0');
+    document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
+    renderFigureList(document.getElementById('fig-search').value);
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+};
+document.getElementById('pos-igual-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filtroPosIgual = !filtroPosIgual;
+    localStorage.setItem('filtroPosIgual', filtroPosIgual ? '1' : '0');
+    // Si se activa y Posición Inicial/Final ya tenían valores explícitos
+    // distintos entre sí, no quedaría ninguna toma para mostrar: se iguala
+    // la Final a la Inicial para que la activación nunca deje la lista vacía.
+    if (filtroPosIgual && filterPosIni !== filterPosFin) filterPosFin = filterPosIni;
+    document.getElementById('pos-igual-btn').classList.toggle('active', filtroPosIgual);
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
 document.getElementById('ver-reset-btn').onclick = (e) => {
     e.stopPropagation();
@@ -755,6 +1309,7 @@ document.getElementById('ver-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
 document.getElementById('posini-reset-btn').onclick = (e) => {
     e.stopPropagation();
@@ -765,6 +1320,7 @@ document.getElementById('posini-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
 document.getElementById('posfin-reset-btn').onclick = (e) => {
     e.stopPropagation();
@@ -775,7 +1331,191 @@ document.getElementById('posfin-reset-btn').onclick = (e) => {
     closeAllDropdowns();
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 };
+
+// ===== AYUDA: VALOR ACTUAL "TAL COMO SE VE EN EL VIDEO" =====
+// Devuelve el valor real de una dimensión (figura/posIni/posFin/dificultad)
+// del combo que está mostrando el video en este momento, sin importar qué
+// filtro esté (o no) seleccionado en los desplegables. Preserva "" (figuras/
+// posiciones sin nombre propio, "---" en pantalla) tal cual, igual que hace
+// activarComboCompleto; sólo devuelve null si todavía no hay combo cargado.
+function valorActualDelVideo(dimension) {
+    if (dimension === 'dificultad') {
+        return (typeof currentDificultadValue === 'string') ? currentDificultadValue : null;
+    }
+    const combo = comboByKey[currentFigureValue] || {};
+    if (dimension === 'figura') return (typeof combo.figura === 'string') ? combo.figura : null;
+    if (dimension === 'posIni') return (typeof combo.posIni === 'string') ? combo.posIni : null;
+    return (typeof combo.posFin === 'string') ? combo.posFin : null;
+}
+
+// ===== FIJAR/QUITAR FILTRO DESDE EL VIDEO (carteles centrales clickeables) =====
+// Al clickear el cartel de Dificultad/Posición Inicial/Figura/Posición Final
+// dentro del video:
+// - Si esa dimensión NO tiene filtro activo (sin borde blanco interior), se
+//   fija como filtro usando el valor que realmente se está viendo ahora (no
+//   el que estuviera elegido en el menú).
+// - Si esa dimensión YA tiene filtro activo (con borde blanco interior), se
+//   quita ese filtro (vuelve a "Cualquiera"), igual que el botón ↺ del menú.
+function filtroActivoEnDimension(dimension) {
+    if (dimension === 'figura') return filterFigura !== null;
+    if (dimension === 'dificultad') return filterDificultad !== null;
+    if (dimension === 'posIni') return filterPosIni !== null;
+    return filterPosFin !== null;
+}
+
+function fijarFiltroDesdeVideoActual(dimension) {
+    const yaActivo = filtroActivoEnDimension(dimension);
+    let nuevoValor;
+    if (yaActivo) {
+        nuevoValor = null;
+    } else {
+        nuevoValor = valorActualDelVideo(dimension);
+        if (nuevoValor === null) return;
+    }
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    ultimaDimensionSeleccionada = dimension;
+    if (dimension === 'figura') filterFigura = nuevoValor;
+    else if (dimension === 'dificultad') filterDificultad = nuevoValor;
+    else if (dimension === 'posIni') filterPosIni = nuevoValor;
+    else filterPosFin = nuevoValor;
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+}
+
+// ===== CÍRCULOS DE FIGURA (dentro del video) =====
+// A diferencia del cartel de texto de Figura (que fija/quita la figura
+// COMPLETA con fijarFiltroDesdeVideoActual), estos círculos fijan/quitan el
+// filtro de Figura con un componente puntual: si la figura actual es
+// singular hay un solo círculo (la figura entera); si es compuesta ("A +
+// B") hay un círculo por cada parte, y cada uno filtra por esa parte sola.
+// Clickear el círculo de una parte ya fijada la quita (vuelve a
+// "Cualquiera"); clickear otro círculo cambia el filtro a esa otra parte.
+function fijarFiltroFiguraComponente(valor) {
+    const nuevoValor = (filterFigura === valor) ? null : valor;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    ultimaDimensionSeleccionada = 'figura';
+    filterFigura = nuevoValor;
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+}
+
+// ===== BOTONES ENCADENAR POSICIÓN (dentro del video) =====
+// Botón izquierdo (círculo celeste): la Posición Final que se ve AHORA en el
+// video pasa a ser la nueva Posición Inicial, y la Posición Final se resetea
+// a "Cualquiera". Botón derecho (círculo azul): al revés, la Posición
+// Inicial que se ve ahora pasa a ser la nueva Posición Final, y la Posición
+// Inicial se resetea. Usan el valor real del video actual (no el filtro
+// elegido en el menú, que puede ser "Cualquiera"). Sirve para encadenar:
+// terminaste en una posición y la usás como punto de partida del próximo
+// movimiento (o viceversa), sin tener que ir a buscarla de nuevo en los
+// desplegables.
+document.getElementById('posini-swap-btn').onclick = () => {
+    if (combosData.length === 0) return;
+    const nuevaPosIni = valorActualDelVideo('posFin');
+    if (nuevaPosIni === null) return;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filterPosIni = nuevaPosIni;
+    filterPosFin = null;
+    ultimaDimensionSeleccionada = 'posIni';
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
+};
+
+document.getElementById('posfin-swap-btn').onclick = () => {
+    if (combosData.length === 0) return;
+    const nuevaPosFin = valorActualDelVideo('posIni');
+    if (nuevaPosFin === null) return;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filterPosFin = nuevaPosFin;
+    filterPosIni = null;
+    ultimaDimensionSeleccionada = 'posFin';
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
+};
+
+// ===== BUSCADOR DE MOVIMIENTOS POR CÓDIGO (🔍, hotkey B) =====
+// Junta TODOS los Movimientos existentes (combinación + dificultad +
+// variante), sin importar los filtros activos, cada uno con el código de su
+// archivo de video (mismo "número + 3 letras" que ya usa el cartel opcional
+// del toggle "T", ver extraerInfoArchivo), para poder ir directo a
+// cualquiera tecleando su código.
+function listaMovimientosConCodigo() {
+    const lista = [];
+    combosData.forEach(combo => {
+        const dificultades = combo.dificultades || {};
+        Object.keys(dificultades)
+            .sort((a, b) => parseInt(a.replace('D', '')) - parseInt(b.replace('D', '')))
+            .forEach(dif => {
+                (dificultades[dif] || []).forEach((toma, variantIndex) => {
+                    const info = extraerInfoArchivo(toma.file8t);
+                    if (!info) return;
+                    lista.push({ comboId: combo.id, dificultad: dif, variantIndex, numero: info.numero, letras: info.letras });
+                });
+            });
+    });
+    lista.sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true }));
+    return lista;
+}
+
+function renderMovSearchList(query) {
+    const listEl = document.getElementById('movsearch-list');
+    if (!listEl) return;
+    const q = (query || '').trim().toUpperCase();
+    const todos = listaMovimientosConCodigo();
+    const filtrados = q === '' ? todos : todos.filter(m => m.letras.includes(q) || m.numero.includes(q));
+    listEl.innerHTML = filtrados.length
+        ? filtrados.map(m => `<div class="dropdown-item" data-combo="${m.comboId}" data-dif="${m.dificultad}" data-variant="${m.variantIndex}">${m.numero} - ${m.letras}</div>`).join('')
+        : `<div class="dropdown-item" style="cursor:default;opacity:0.6;">Sin resultados</div>`;
+    listEl.querySelectorAll('.dropdown-item[data-combo]').forEach(item => {
+        item.onclick = () => {
+            irAMovimientoPorCodigo(item.dataset.combo, item.dataset.dif, parseInt(item.dataset.variant, 10));
+        };
+    });
+}
+
+// Salta directo a un Movimiento puntual elegido por código: fija Figura/
+// Posición Inicial/Posición Final/Dificultad exactamente como los tiene ese
+// Movimiento (igual que activarComboCompleto) y además se para en la
+// variante exacta (variantIndex) que corresponde a ese archivo concreto.
+function irAMovimientoPorCodigo(comboId, dificultad, variantIndex) {
+    const combo = comboByKey[comboId];
+    if (!combo) return;
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    activarComboCompleto(comboId);
+    filterDificultad = dificultad;
+    currentDificultadValue = dificultad;
+    currentVariantIndex = variantIndex;
+    closeAllDropdowns();
+    actualizarEtiquetaDificultad();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+}
+
+document.getElementById('movsearch-btn').onclick = (e) => {
+    e.stopPropagation();
+    toggleDropdown('movsearch-options-panel', () => {
+        renderMovSearchList('');
+        document.getElementById('movsearch-search').focus();
+    });
+};
+document.getElementById('movsearch-options-panel').onclick = e => e.stopPropagation();
+document.getElementById('movsearch-search').addEventListener('input', (e) => {
+    renderMovSearchList(e.target.value);
+});
 
 document.getElementById('fig-options-panel').onclick = e => e.stopPropagation();
 document.getElementById('song-options-panel').onclick = e => e.stopPropagation();
@@ -868,6 +1608,7 @@ function cambiarPorFlechas(direccion) {
 
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 
     // Si el desplegable correspondiente está abierto, refrescar su resaltado.
     if (dimension === 'figura') renderFigureList(document.getElementById('fig-search').value);
@@ -898,6 +1639,7 @@ function resetearDimensionActual() {
 
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 
     if (dimension === 'figura') renderFigureList(document.getElementById('fig-search').value);
     else if (dimension === 'posIni') renderPosIniList(document.getElementById('posini-search').value);
@@ -920,6 +1662,7 @@ function resetearTodosLosFiltros() {
 
     recalcularComboActual();
     aplicarCambioVisual();
+    registrarHistorialFiltros();
 
     // Si algún desplegable está abierto, refrescar su resaltado también.
     renderFigureList(document.getElementById('fig-search').value);
@@ -927,6 +1670,78 @@ function resetearTodosLosFiltros() {
     renderPosIniList(document.getElementById('posini-search').value);
     renderPosFinList(document.getElementById('posfin-search').value);
 }
+
+// ===== HISTORIAL DE FILTROS (Deshacer / Rehacer, Ctrl+Z / Ctrl+Y) =====
+// Cada vez que cambia alguno de los 4 filtros (Figura, Dificultad, Posición
+// Inicial, Posición Final), por cualquier vía (desplegables, botones ↺,
+// flechas ↑/↓ o Q/E, tecla F/W, atajos numéricos de Dificultad), se guarda
+// una foto de los 4 valores. Ctrl+Z retrocede un paso en ese historial,
+// Ctrl+Y (o Ctrl+Shift+Z) avanza. Los botones ↶ / ↷ junto a A-Z/BPM hacen
+// lo mismo con el mouse/toque.
+let historialFiltros = [{ filterFigura: null, filterPosIni: null, filterPosFin: null, filterDificultad: null }];
+let historialIndice = 0;
+
+function snapshotFiltrosActual() {
+    return { filterFigura, filterPosIni, filterPosFin, filterDificultad };
+}
+
+function mismosFiltros(a, b) {
+    return a.filterFigura === b.filterFigura && a.filterPosIni === b.filterPosIni &&
+        a.filterPosFin === b.filterPosFin && a.filterDificultad === b.filterDificultad;
+}
+
+// Se llama justo después de cada cambio real de filtro. Si el resultado
+// coincide con la foto actual (p. ej. clic en el valor ya seleccionado), no
+// agrega nada. Si hubo Deshacer de por medio, descarta el "futuro" (redo)
+// antes de agregar el nuevo paso, como el Ctrl+Z de cualquier editor.
+function registrarHistorialFiltros() {
+    const snap = snapshotFiltrosActual();
+    if (mismosFiltros(snap, historialFiltros[historialIndice])) return;
+    historialFiltros = historialFiltros.slice(0, historialIndice + 1);
+    historialFiltros.push(snap);
+    historialIndice = historialFiltros.length - 1;
+    actualizarBotonesHistorial();
+}
+
+function actualizarBotonesHistorial() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.disabled = historialIndice <= 0;
+    if (redoBtn) redoBtn.disabled = historialIndice >= historialFiltros.length - 1;
+}
+
+// Aplica una foto del historial a los filtros reales y refresca todo lo que
+// depende de ellos (grilla, desplegables, etiquetas), igual que un cambio
+// de filtro manual.
+function aplicarSnapshotFiltros(snap) {
+    if (isPlaying || !isFirstAction) mutearParaCarga();
+    filterFigura = snap.filterFigura;
+    filterPosIni = snap.filterPosIni;
+    filterPosFin = snap.filterPosFin;
+    filterDificultad = snap.filterDificultad;
+    recalcularComboActual();
+    aplicarCambioVisual();
+    renderFigureList(document.getElementById('fig-search').value);
+    renderPosIniList(document.getElementById('posini-search').value);
+    renderPosFinList(document.getElementById('posfin-search').value);
+    renderDificultadList();
+    actualizarBotonesHistorial();
+}
+
+function deshacerFiltros() {
+    if (historialIndice <= 0) return;
+    historialIndice--;
+    aplicarSnapshotFiltros(historialFiltros[historialIndice]);
+}
+
+function rehacerFiltros() {
+    if (historialIndice >= historialFiltros.length - 1) return;
+    historialIndice++;
+    aplicarSnapshotFiltros(historialFiltros[historialIndice]);
+}
+
+document.getElementById('undo-btn').onclick = deshacerFiltros;
+document.getElementById('redo-btn').onclick = rehacerFiltros;
 
 function cambiarCancion(direccion) {
     const sortActive = document.getElementById('sort-abc').classList.contains('active') ? 'abc' : 'bpm';
@@ -941,7 +1756,7 @@ function cambiarCancion(direccion) {
         audioPlayer.pause();
         currentSongValue = sortedSongs[newIndex].file;
         localStorage.setItem('lastSong', currentSongValue);
-        document.getElementById('song-selected').innerText = `🎧 ${sortedSongs[newIndex].name} [${sortedSongs[newIndex].bpm} BPM]`;
+        setDropdownSelectedHTML('song-selected', `🎧 ${sortedSongs[newIndex].name} [${sortedSongs[newIndex].bpm} BPM]`);
         prepararFuentes();
         if (isPlaying) {
             reiniciarDesdeCero(true);
@@ -972,7 +1787,7 @@ function setupSelects() {
             currentSongValue = canciones[0].file;
         }
         const songObj = canciones.find(c => c.file === currentSongValue);
-        document.getElementById('song-selected').innerText = `🎧 ${songObj.name} [${songObj.bpm} BPM]`;
+        setDropdownSelectedHTML('song-selected', `🎧 ${songObj.name} [${songObj.bpm} BPM]`);
     }
 
     renderFigureList();
@@ -987,9 +1802,9 @@ function setupSelects() {
 // disponible por abajo, igual que antes con MaxH).
 function cargarDificultad() {
     const fig = currentFigureValue;
-    if (!fig || !figurasData[fig]) return;
+    if (!fig || !figurasData[fig]) { actualizarPaginacion(); return; }
     const niveles = Object.keys(figurasData[fig]);
-    if (niveles.length === 0) return;
+    if (niveles.length === 0) { actualizarPaginacion(); return; }
 
     if (filterDificultad !== null && niveles.includes(filterDificultad)) {
         currentDificultadValue = filterDificultad;
@@ -1018,10 +1833,9 @@ function cargarDificultad() {
 // muestra solo el arcoiris, siempre igual, sin importar qué Dificultad se
 // esté reproduciendo en cada paso (para que no cambie de cartel al navegar).
 function actualizarEtiquetaDificultad() {
-    const el = document.getElementById('ver-selected');
-    el.innerText = filterDificultad !== null
+    setDropdownSelectedHTML('ver-selected', filterDificultad !== null
         ? currentDificultadValue
-        : `🌈`;
+        : `🌈`);
 }
 
 // Arma la lista plana de TODAS las tomas (combinación + dificultad + variante)
@@ -1081,6 +1895,27 @@ function actualizarPaginacion() {
     if (pageTotalEl) pageTotalEl.innerText = total;
     prevPageBtn.disabled = (idx <= 0);
     nextPageBtn.disabled = (idx >= total - 1);
+    // Mismo estado que el paginador de arriba, para las flechitas < > que
+    // están ancladas al centro vertical del video.
+    if (videoPrevBtn) videoPrevBtn.disabled = prevPageBtn.disabled;
+    if (videoNextBtn) videoNextBtn.disabled = nextPageBtn.disabled;
+    // Las flechas de encadenar Posición Inicial/Final tampoco tienen sentido
+    // si no hay ningún Movimiento para mostrar (no hay video del que sacar
+    // la posición actual), así que se ocultan junto con las de navegación.
+    const posIniSwapBtn = document.getElementById('posini-swap-btn');
+    const posFinSwapBtn = document.getElementById('posfin-swap-btn');
+    if (posIniSwapBtn) posIniSwapBtn.style.display = (total === 0) ? 'none' : '';
+    if (posFinSwapBtn) posFinSwapBtn.style.display = (total === 0) ? 'none' : '';
+    // Botón izquierdo (celeste): fija como Posición Inicial la Posición Final
+    // que se ve AHORA, así que muestra el código de esa Posición Final.
+    // Botón derecho (azul): al revés, muestra el código de la Posición
+    // Inicial actual.
+    if (total > 0) {
+        const spanIni = posIniSwapBtn ? posIniSwapBtn.querySelector('span') : null;
+        const spanFin = posFinSwapBtn ? posFinSwapBtn.querySelector('span') : null;
+        if (spanIni) spanIni.innerText = codigoDePosicion(valorActualDelVideo('posFin'));
+        if (spanFin) spanFin.innerText = codigoDePosicion(valorActualDelVideo('posIni'));
+    }
 }
 
 // Salta directamente al Movimiento N (1-based) tecleado en el indicador,
@@ -1186,6 +2021,9 @@ prevPageBtn.onclick = () => moverCombo(-1);
 
 nextPageBtn.onclick = () => moverCombo(1);
 
+if (videoPrevBtn) videoPrevBtn.onclick = () => moverCombo(-1);
+if (videoNextBtn) videoNextBtn.onclick = () => moverCombo(1);
+
 // ===== INPUT DE MOVIMIENTO (escribir un número para ir directo ahí) =====
 (function () {
     const input = document.getElementById('page-indicator-input');
@@ -1232,11 +2070,8 @@ async function reproducirSincronizado(forzarPlay = false) {
 
     const mainVideos = getAllMainVideos();
     const loopVideos = getAllLoopVideos();
-    const totalVideos = mainVideos.length;
 
-    const loadingCount = loadingIndicator.querySelector('.loading-count');
     loadingIndicator.style.display = 'flex';
-    if (loadingCount) loadingCount.textContent = `0 / ${totalVideos}`;
 
     // ── PASO 1: Reset completo ──────────────────────────────────────────────
     mainVideos.forEach(v => { v.pause(); v.currentTime = 0; v.load(); });
@@ -1266,15 +2101,11 @@ async function reproducirSincronizado(forzarPlay = false) {
         if (currentSeq !== loadSequence) return;
 
         // Esperar canplaythrough de cada video (señal mínima necesaria)
-        let readyCount = 0;
         const waitCanPlay = mainVideos.map(v => new Promise(resolve => {
             if (v.readyState >= 3) { resolve(); return; }
             const fn = () => { v.removeEventListener('canplaythrough', fn); resolve(); };
             v.addEventListener('canplaythrough', fn);
             setTimeout(resolve, 12000); // fallback 12s
-        }).then(() => {
-            readyCount++;
-            if (loadingCount) loadingCount.textContent = `${readyCount} / ${totalVideos}`;
         }));
 
         const waitAudio = new Promise(resolve => {
@@ -1438,10 +2269,121 @@ function actualizarUI(reproduciendo) {
 
 document.getElementById('refresh-btn').onclick = () => reiniciarDesdeCero(true);
 
+document.getElementById('controls-reset-btn').onclick = () => resetearTodosLosFiltros();
+
 document.getElementById('mute-btn').onclick = (e) => {
     audioPlayer.muted = !audioPlayer.muted;
     e.target.innerText = audioPlayer.muted ? "🔇" : "🔊";
 };
+
+// Antes era un botón "T" suelto en la barra de controles; ahora vive como
+// opción dentro del menú (☰), pero la función es la misma (y la sigue
+// usando el atajo de teclado "t").
+function toggleMostrarTitulo() {
+    mostrarTitulo = !mostrarTitulo;
+    localStorage.setItem('mostrarTitulo', mostrarTitulo ? '1' : '0');
+    document.getElementById('menu-title-toggle-item').classList.toggle('active', mostrarTitulo);
+    renderGrid();
+}
+
+// ===== MENÚ (☰): descargar para modo avión + mostrar código identificador =====
+document.getElementById('menu-btn').onclick = (e) => {
+    e.stopPropagation();
+    toggleDropdown('menu-options-panel');
+};
+document.getElementById('menu-options-panel').onclick = e => e.stopPropagation();
+
+document.getElementById('menu-download-item').onclick = () => {
+    if ('serviceWorker' in navigator && window.requestOfflineDownload) {
+        window.requestOfflineDownload();
+    }
+    closeAllDropdowns();
+};
+
+document.getElementById('menu-title-toggle-item').onclick = () => {
+    toggleMostrarTitulo();
+    closeAllDropdowns();
+};
+
+// "🧹 Borrar caché y actualizar": desregistra el Service Worker y borra TODO
+// lo que tenga cacheado (shell de la app + lo descargado para modo avión,
+// porque ambos viven en el mismo cache — ver sw.js), y recarga con un query
+// nuevo para asegurarse de traer la última versión real de la red, no una
+// copia vieja del caché HTTP del navegador. Es destructivo (borra los
+// videos/canciones descargados), así que pide confirmación antes.
+document.getElementById('menu-clear-cache-item').onclick = async () => {
+    closeAllDropdowns();
+    const confirmado = confirm('Esto borra todo lo guardado en este dispositivo (incluido lo descargado para modo avión) y recarga la última versión de la app. ¿Continuar?');
+    if (!confirmado) return;
+    try {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((reg) => reg.unregister()));
+        }
+        if (window.caches) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+    } catch (err) {
+        console.warn('No se pudo limpiar el caché por completo', err);
+    } finally {
+        window.location.href = window.location.pathname + '?_upd=' + Date.now();
+    }
+};
+
+// ===== MODAL: TODOS LOS ATAJOS DE TECLADO CARGADOS =====
+// Lista a mano, en el mismo orden en que aparecen los "case" del switch de
+// abajo, para que quede documentado cada atajo que la app realmente escucha.
+const HOTKEYS_INFO = [
+    { keys: ['Espacio'], desc: 'Reproducir / Pausar' },
+    { keys: ['S'], desc: 'Cambiar el orden de canciones (A-Z / BPM)' },
+    { keys: ['R'], desc: 'Reiniciar el movimiento actual desde el principio' },
+    { keys: ['M'], desc: 'Silenciar / Activar el sonido' },
+    { keys: ['T'], desc: 'Mostrar u ocultar el código identificador' },
+    { keys: ['B'], desc: 'Buscar un Movimiento por su código de 3 letras' },
+    { keys: ['I'], desc: 'Activar/desactivar "=": mostrar sólo tomas con Posición Inicial y Final iguales' },
+    { keys: ['+'], desc: 'Aumentar la velocidad' },
+    { keys: ['-'], desc: 'Disminuir la velocidad' },
+    { keys: ['A'], desc: 'Canción anterior' },
+    { keys: ['D'], desc: 'Canción siguiente' },
+    { keys: ['1', '2', '3', '4', '5'], desc: 'Ir directo a esa Dificultad (D1 a D5)' },
+    { keys: ['0', '|'], desc: 'Dificultad en "Cualquiera"' },
+    { keys: ['← Flecha Izq'], desc: 'Movimiento anterior' },
+    { keys: ['→ Flecha Der'], desc: 'Movimiento siguiente' },
+    { keys: ['↑ Flecha Arr', 'Q'], desc: 'Retroceder un valor en la última dimensión tocada (Figura, Posición Inicial, Posición Final o Dificultad)' },
+    { keys: ['↓ Flecha Abj', 'E'], desc: 'Avanzar un valor en esa misma dimensión' },
+    { keys: ['W'], desc: 'Poner en "Cualquiera" sólo la dimensión tocada por última vez' },
+    { keys: ['F'], desc: 'Reiniciar TODOS los filtros (Figura, Dificultad, Posición Inicial y Final)' },
+    { keys: ['Ctrl', 'Z'], desc: 'Deshacer el último cambio de filtros' },
+    { keys: ['Ctrl', 'Y'], desc: 'Rehacer el cambio de filtros deshecho' },
+];
+
+function renderHotkeysModal() {
+    const body = document.getElementById('hotkeys-modal-body');
+    if (!body) return;
+    body.innerHTML = HOTKEYS_INFO.map(h => `
+        <div class="hotkey-row">
+            <div class="hotkey-keys">${h.keys.map(k => `<span class="hotkey-key">${k}</span>`).join('')}</div>
+            <div class="hotkey-desc">${h.desc}</div>
+        </div>
+    `).join('');
+}
+
+const hotkeysModalOverlay = document.getElementById('hotkeys-modal-overlay');
+document.getElementById('menu-hotkeys-item').onclick = () => {
+    renderHotkeysModal();
+    if (hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'flex';
+    closeAllDropdowns();
+};
+document.getElementById('hotkeys-modal-close').onclick = () => {
+    if (hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'none';
+};
+if (hotkeysModalOverlay) {
+    hotkeysModalOverlay.onclick = (e) => {
+        if (e.target === hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'none';
+    };
+}
+document.getElementById('hotkeys-modal').onclick = e => e.stopPropagation();
 
 rateInput.oninput = actualizarVelocidades;
 rateInput.onchange = () => {
@@ -1492,17 +2434,57 @@ document.addEventListener('visibilitychange', () => {
 
 // ===== ATAJOS DE TECLADO =====
 document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+
+    // Con el modal de "Atajos de teclado" abierto, sólo Escape hace algo
+    // (cerrarlo) — así evitamos disparar Espacio/flechas/etc. sin querer
+    // mientras se está leyendo la lista.
+    const hotkeysModal = document.getElementById('hotkeys-modal-overlay');
+    if (hotkeysModal && hotkeysModal.style.display === 'flex') {
+        if (key === 'escape') { e.preventDefault(); hotkeysModal.style.display = 'none'; }
+        return;
+    }
+
+    // Ctrl+Z / Ctrl+Y (o Ctrl+Shift+Z): deshacer/rehacer cambios de filtros
+    // (Figura, Dificultad, Posición Inicial, Posición Final). Tiene prioridad
+    // sobre cualquier otro atajo, salvo con el modal de atajos abierto.
+    if ((e.ctrlKey || e.metaKey) && key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) rehacerFiltros(); else deshacerFiltros();
+        return;
+    }
+    if ((e.ctrlKey || e.metaKey) && key === 'y') {
+        e.preventDefault();
+        rehacerFiltros();
+        return;
+    }
+
+    // Con alguno de los desplegables (Figura, Dificultad, Posición Inicial,
+    // Posición Final o Canción) abierto, Flecha Arriba/Abajo sólo mueven un
+    // resaltado visual dentro de esa lista (sin aplicar nada todavía), Enter
+    // confirma el ítem resaltado, y Escape cierra el desplegable. Esto tiene
+    // prioridad incluso con el foco puesto en el buscador de texto.
+    const openDropdown = getOpenDropdown();
+    if (openDropdown && (key === 'arrowup' || key === 'arrowdown' || key === 'enter' || key === 'escape')) {
+        e.preventDefault();
+        if (key === 'arrowup') navigateDropdownHighlight(openDropdown.listId, -1);
+        else if (key === 'arrowdown') navigateDropdownHighlight(openDropdown.listId, 1);
+        else if (key === 'enter') confirmDropdownHighlight(openDropdown.listId);
+        else if (key === 'escape') closeAllDropdowns();
+        return;
+    }
+
     const isRateInput = e.target.id === 'rate-input';
     const isOtherInput = e.target.tagName.toLowerCase() === 'input' && !isRateInput;
     if (isOtherInput) return;
 
-    const hotkeys = [' ', 's', 'r', 'm', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
-    if (isRateInput && hotkeys.includes(e.key.toLowerCase())) {
+    const hotkeys = [' ', 's', 'r', 'm', 't', 'b', 'i', '+', '-', 'a', 'd', 'q', 'e', 'w', 'f', '0', '1', '2', '3', '4', '5', '|', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'];
+    if (isRateInput && hotkeys.includes(key)) {
         e.preventDefault();
         e.target.blur();
     }
 
-    switch(e.key.toLowerCase()) {
+    switch(key) {
         case ' ':
             e.preventDefault();
             playBtn.click();
@@ -1520,6 +2502,17 @@ document.addEventListener('keydown', (e) => {
             break;
         case 'm':
             document.getElementById('mute-btn').click();
+            break;
+        case 't':
+            toggleMostrarTitulo();
+            break;
+        case 'b':
+            e.preventDefault();
+            document.getElementById('movsearch-btn').click();
+            break;
+        case 'i':
+            e.preventDefault();
+            document.getElementById('pos-igual-btn').click();
             break;
         case '+':
             e.preventDefault();
@@ -1555,6 +2548,7 @@ document.addEventListener('keydown', (e) => {
             filterDificultad = targetDificultad;
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
             break;
         case '|':
         case '0':
@@ -1565,6 +2559,7 @@ document.addEventListener('keydown', (e) => {
             filterDificultad = null;
             recalcularComboActual();
             aplicarCambioVisual();
+            registrarHistorialFiltros();
             break;
         case 'arrowleft':
             e.preventDefault();
@@ -1596,13 +2591,18 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== INICIO =====
+document.getElementById('menu-title-toggle-item').classList.toggle('active', mostrarTitulo);
+document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
+document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
+document.getElementById('pos-igual-btn').classList.toggle('active', filtroPosIgual);
+
 const savedSort = getCookie('songSort');
 if (savedSort === 'bpm') {
     document.getElementById('sort-abc').classList.remove('active');
     document.getElementById('sort-bpm').classList.add('active');
 }
 
-iniciarApp();
+window.appReadyPromise = iniciarApp();
 
 // ===== PULL TO RELOAD (SOLO MOVIL) =====
 (function() {
