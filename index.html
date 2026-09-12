@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=85">
+    <link rel="stylesheet" href="style.css?v=87">
 </head>
 <body>
 
@@ -88,7 +88,7 @@
                 </div>
             </div>
             <div class="dropdown-container fav-list-dropdown-container" id="fav-list-dropdown-container">
-                <div class="dropdown-selected" id="fav-list-selected"><span class="dropdown-label-text">📋 Seleccionar lista</span></div>
+                <div class="dropdown-selected" id="fav-list-selected"><span class="dropdown-label-text">...</span></div>
                 <div class="dropdown-options" id="fav-list-options-panel">
                     <div class="fav-list-manage-row">
                         <button class="fav-mini-btn" id="fav-list-new-btn" title="Nueva lista de favoritos">+</button>
@@ -100,6 +100,7 @@
             </div>
             <button class="history-btn fav-star-btn" id="fav-add-current-btn" title="Agregar la Figura actual a la lista seleccionada (B)">⭐</button>
             <button class="history-btn hide-star-btn" id="fig-hide-current-btn" title="Ocultar el movimiento actual (O)">🙈</button>
+            <button class="history-btn note-btn" id="fig-note-btn" title="Anotar una nota para el movimiento actual (N)">📝</button>
             <div class="movsearch-container" id="movsearch-container">
                 <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código (L)">🔍</button>
                 <div class="movsearch-options" id="movsearch-options-panel">
@@ -115,13 +116,9 @@
             <button id="play-btn" class="btn-yellow" title="Reproducir (Espacio)">
                 <span id="play-icon" class="icon-play">▶</span>
             </button>
-            <div class="divider"></div>
             <button id="refresh-btn" class="action-btn" title="Reiniciar (R)">🔄</button>
-            <div class="divider"></div>
             <button id="controls-reset-btn" class="controls-reset-btn" title="Reiniciar Todos los Filtros (F)">🌈</button>
-            <div class="divider"></div>
             <button id="mute-btn" class="action-btn" title="Silenciar (M)">🔊</button>
-            <div class="divider"></div>
             <div class="slow-container">
                 <div class="rate-wrapper">
                     <span class="rate-btn" id="rate-minus">-</span>
@@ -133,7 +130,6 @@
                 </div>
                 <span id="calc-bpm-label">--- BPM</span>
             </div>
-            <div class="divider"></div>
             <div class="menu-container" id="menu-container">
                 <button id="menu-btn" class="menu-btn" title="Más opciones">☰</button>
                 <div class="menu-options" id="menu-options-panel">
@@ -154,11 +150,17 @@
                     <div class="menu-item" id="menu-hotkeys-item">
                         <span class="menu-item-label">⌨️ Ver atajos de teclado</span>
                     </div>
+                    <div class="menu-item" id="menu-export-item" title="Genera un texto copiable con tus favoritos, tus Figuras ocultas y tus notas, para guardarlo como respaldo">
+                        <span class="menu-item-label">⬆️ Exportar mis favoritos, ocultos y notas</span>
+                    </div>
+                    <div class="menu-item" id="menu-import-item" title="Pegá un texto exportado antes para restaurar tus favoritos, tus Figuras ocultas y tus notas">
+                        <span class="menu-item-label">⬇️ Importar mis favoritos, ocultos y notas</span>
+                    </div>
                     <div class="menu-item" id="menu-clear-cache-item" title="Borra todo lo guardado (incluido el modo avión) y recarga la última versión">
                         <span class="menu-item-label">🧹 Borrar caché y actualizar</span>
                     </div>
-                    <div class="menu-item" id="menu-clear-cache-keep-favs-item" title="Borra el caché de la app y lo descargado para modo avión, y recarga la última versión, pero mantiene tus listas de favoritos y tus Figuras ocultas">
-                        <span class="menu-item-label">🧹 Borrar caché y actualizar (conservando mis favoritos y ocultos)</span>
+                    <div class="menu-item" id="menu-clear-cache-keep-favs-item" title="Borra el caché de la app y lo descargado para modo avión, y recarga la última versión, pero mantiene tus listas de favoritos, tus Figuras ocultas y tus notas">
+                        <span class="menu-item-label">🧹 Borrar caché y actualizar (conservando mis favoritos, ocultos y notas)</span>
                     </div>
                 </div>
             </div>
@@ -188,6 +190,7 @@
             <button id="video-next-btn" class="page-btn video-nav-btn video-nav-btn-right" title="Siguiente (Flecha Der)">&gt;</button>
             <button id="posini-swap-btn" class="pos-swap-btn pos-swap-btn-ini" title="Poner como Posición Inicial la actual Posición Final (y resetear la Posición Final)"><span></span></button>
             <button id="posfin-swap-btn" class="pos-swap-btn pos-swap-btn-fin" title="Poner como Posición Final la actual Posición Inicial (y resetear la Posición Inicial)"><span></span></button>
+            <div id="figure-note-display"></div>
         </div>
         <div class="video-side"></div>
         <audio id="audio-player"></audio>
@@ -200,6 +203,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=65"></script>
+    <script src="script.js?v=67"></script>
 </body>
 </html>
