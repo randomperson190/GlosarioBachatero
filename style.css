@@ -10,6 +10,14 @@ body, html {
     overflow: hidden;
     font-family: sans-serif;
     color: white;
+    /* Nada acá es texto para leer/copiar: es una app de botones y controles,
+       así que se desactiva la selección de texto (y el menú nativo de
+       "Copiar / Compartir / Seleccionar todo / Buscar en la Web" que
+       aparecía, por ejemplo, al tocar sostenido sobre el número de
+       velocidad) en toda la interfaz. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 @media (min-width: 1081px) {
