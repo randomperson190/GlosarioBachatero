@@ -1872,13 +1872,18 @@ function actualizarEstadoBotonFavSaveFiltered() {
 // Refresca el texto mostrado del menú ("..." por defecto, para que el menú
 // quepa en su ancho acotado de 85px, o el nombre + cantidad de la lista
 // elegida), igual patrón que el resto de los desplegables
-// (fig/posini/posfin/song).
+// (fig/posini/posfin/song). También marca el contenedor con la clase
+// "has-lists" cuando ya existe alguna lista creada, para que el CSS le dé
+// más ancho al botón (ver #fav-list-dropdown-container.has-lists) que
+// cuando todavía no hay ninguna.
 function actualizarEtiquetaFavLista() {
     const lists = getFavLists();
     const activa = lists.find(l => l.id === favActiveListId);
     setDropdownSelectedHTML('fav-list-selected', activa
         ? `📋 ${activa.name} - [${activa.items.length}]`
         : '...');
+    const contenedor = document.getElementById('fav-list-dropdown-container');
+    if (contenedor) contenedor.classList.toggle('has-lists', lists.length > 0);
 }
 
 // Panel del menú: arriba la fila +/✎/🗑 (actúan sobre la lista elegida),
