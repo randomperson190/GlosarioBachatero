@@ -1687,25 +1687,12 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     color: #ddd;
     line-height: 1.3;
 }
-/* ================= FORZAR SIEMPRE VERTICAL (celular) =================
-   Si el celular se gira a horizontal, no queremos que la app se reacomode:
-   tiene que seguir viéndose exactamente igual que en vertical. Como los
-   media query normales sólo saben de ancho/alto reales (no de "orientación
-   declarada"), el truco es rotar visualmente toda la página -90° cuando el
-   propio navegador reporta orientación horizontal en una pantalla de
-   celular (alto real chico, <= 500px, para no afectar tablets/iPad que sí
-   tienen su propio layout de escritorio a partir de 1081px de ancho). El
-   html rotado intercambia sus propias width/height (100vh/100vw) para que
-   todo el layout interno se siga calculando como si fuera vertical. */
-@media screen and (orientation: landscape) and (max-height: 500px) {
-    html {
-        transform: rotate(-90deg);
-        transform-origin: left top;
-        width: 100vh;
-        height: 100vw;
-        overflow: hidden;
-        position: absolute;
-        top: 100%;
-        left: 0;
-    }
-}
+/* ================= (antes: truco CSS de forzar vertical al girar el
+   celular) =================
+   Ese truco de "contra-rotar" toda la página con transform:rotate(-90deg)
+   se sacó porque se veía roto en algunos celulares. Ahora el bloqueo de
+   orientación se pide directamente al navegador desde script.js
+   (bloquearOrientacionVertical, vía Screen Orientation API), sin tocar el
+   CSS. Donde esa API no esté soportada, el celular simplemente rota como
+   cualquier página normal.
+*/

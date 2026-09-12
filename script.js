@@ -15,6 +15,29 @@ document.addEventListener('visibilitychange', () => {
     }
 }, { capture: true });
 
+// ===== BLOQUEO DE ORIENTACIÓN (PANTALLA SIEMPRE VERTICAL) =====
+// Reemplaza al viejo truco de "contra-rotar" con CSS (que se veía roto en
+// algunos celulares) por la Screen Orientation API del navegador: le pedimos
+// directamente que bloquee la pantalla en vertical. Sólo funciona en algunos
+// contextos (típicamente Android, y a veces sólo si la app está instalada
+// como PWA / en pantalla completa) — en los navegadores donde no está
+// soportada (ej. Safari/iOS) el pedido simplemente falla en silencio y el
+// teléfono rota como siempre, sin romper nada.
+function bloquearOrientacionVertical() {
+    if (!screen.orientation || !screen.orientation.lock) return;
+    screen.orientation.lock('portrait').catch(() => { /* no soportado acá, ignorar */ });
+}
+bloquearOrientacionVertical();
+document.addEventListener('DOMContentLoaded', bloquearOrientacionVertical);
+window.addEventListener('load', bloquearOrientacionVertical);
+// El lock puede requerir un gesto del usuario o perderse al volver de
+// segundo plano/fullscreen — se reintenta en esos momentos.
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) bloquearOrientacionVertical();
+});
+document.addEventListener('click', bloquearOrientacionVertical, { once: true });
+document.addEventListener('fullscreenchange', bloquearOrientacionVertical);
+
 // ===== PWA SERVICE WORKER =====
 // Registra el SW y, una vez activo, dispara el cacheo de videos/canciones para
 // uso offline. Esto va DESPUÉS del install (no adentro), así una descarga larga
