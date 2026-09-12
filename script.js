@@ -2043,6 +2043,39 @@ document.getElementById('fav-list-rename-btn').onclick = (e) => {
     renderFavListDropdown();
 };
 
+// Botón 💾: crea una lista NUEVA con TODOS los Movimientos que cumplen el
+// filtro actualmente activo (Figura/Posición Inicial/Posición Final/
+// Dificultad/"=", respetando también las Figuras ocultas, salvo que
+// "Mostrar figuras ocultas" esté prendido — mismo criterio que
+// construirPasosFiltrados, que es lo que arma el contador "X/Y" de arriba).
+// Útil para guardar de un solo toque, por ejemplo, "todas las Figuras de
+// D3" o "todas las que terminan en una Posición puntual".
+document.getElementById('fav-list-save-filtered-btn').onclick = (e) => {
+    e.stopPropagation();
+    const pasos = construirPasosFiltrados();
+    if (pasos.length === 0) {
+        alert('No hay ningún Movimiento que cumpla el filtro actual para guardar.');
+        return;
+    }
+    const nombre = prompt(`Nombre de la nueva lista (se van a guardar los ${pasos.length} Movimientos que cumplen el filtro actual):`, siguienteNombreListaDisponible());
+    if (!nombre || !nombre.trim()) return;
+    const nueva = crearListaFavoritos(nombre.trim());
+    const lists = getFavLists();
+    const lista = lists.find(l => l.id === nueva.id);
+    if (lista) {
+        pasos.forEach(p => {
+            const combo = comboByKey[p.comboId];
+            const toma = combo && combo.dificultades && combo.dificultades[p.dificultad] && combo.dificultades[p.dificultad][p.variantIndex];
+            const info = toma ? extraerInfoArchivo(toma.file8t) : null;
+            lista.items.push({ comboId: p.comboId, dificultad: p.dificultad, variantIndex: p.variantIndex, letras: info ? info.letras : undefined });
+        });
+        guardarFavLists(lists);
+    }
+    actualizarEtiquetaFavLista();
+    actualizarEstadoBotonFavAdd();
+    renderFavListDropdown();
+};
+
 document.getElementById('fav-list-delete-btn').onclick = (e) => {
     e.stopPropagation();
     if (!favActiveListId) return;
