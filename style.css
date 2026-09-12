@@ -1042,6 +1042,11 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     width: 398px;
     height: 698px;
     position: relative;
+    /* Deja que el navegador siga manejando el gesto vertical (scroll/pull),
+       pero no el horizontal: ese lo captura nuestro propio swipe (ver
+       script.js) en vez de que el navegador dispare, por ejemplo, un
+       "volver atrás" nativo con el mismo arrastre. */
+    touch-action: pan-y;
 }
 
 .video-center {
@@ -1050,6 +1055,7 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     position: relative;
     background: #000;
     overflow: hidden;
+    will-change: transform;
 }
 
 /* Flechitas < > para cambiar de Movimiento, ancladas más arriba en el video

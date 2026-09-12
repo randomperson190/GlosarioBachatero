@@ -2989,41 +2989,109 @@ nextPageBtn.onclick = () => moverCombo(1);
 if (videoPrevBtn) videoPrevBtn.onclick = () => moverCombo(-1);
 if (videoNextBtn) videoNextBtn.onclick = () => moverCombo(1);
 
+// Igual que moverCombo, pero sin ejecutar el cambio: sólo dice si hay
+// Movimiento disponible en esa dirección (para el "rebote" del swipe).
+function hayPasoDisponibleSwipe(direccion) {
+    const pasos = construirPasosFiltrados();
+    if (pasos.length === 0) return false;
+    let idx = indicePasoActual(pasos);
+    if (idx === -1) idx = 0;
+    const newIdx = idx + direccion;
+    return newIdx >= 0 && newIdx < pasos.length;
+}
+
 // ===== SWIPE HORIZONTAL SOBRE EL VIDEO (sólo táctil) =====
 // Deslizar hacia la izquierda = siguiente Movimiento (si hay), hacia la
 // derecha = anterior (si hay) — mismo destino que las flechas < > /
-// video-prev-btn / video-next-btn, moverCombo ya se encarga de no hacer
-// nada si no hay página anterior/siguiente disponible.
+// video-prev-btn / video-next-btn. Con animación evidente: el video sigue
+// al dedo mientras se arrastra, y al soltar, o termina de salir y el nuevo
+// Movimiento entra deslizando desde el lado opuesto (si hay destino), o
+// "rebota" de vuelta al centro (si no llegó al umbral, o no hay más
+// Movimientos de ese lado — así se nota el "tope" sin cambiar nada).
 (function() {
-    const area = document.getElementById('video-center-wrapper');
-    if (!area) return;
+    const wrapper = document.getElementById('video-center-wrapper');
+    if (!wrapper) return;
+    const grid = videoGridWrapper; // mismo elemento ya obtenido arriba en el archivo
+    if (!grid) return;
 
     const UMBRAL_X = 50; // píxeles mínimos horizontales para contar como swipe
+    const UMBRAL_INTENCION = 8; // píxeles para decidir si el gesto es horizontal o vertical
+    const DURACION_MS = 180;
+    const TRANSICION = `transform ${DURACION_MS}ms ease, opacity ${DURACION_MS}ms ease`;
+
     let startX = 0;
     let startY = 0;
-    let siguiendo = false;
+    let siguiendo = false; // el dedo está apoyado, todavía sin decidir si es swipe
+    let arrastrando = false; // ya se confirmó que es un arrastre horizontal
+    let anchoWrapper = 0;
 
-    area.addEventListener('touchstart', (e) => {
+    wrapper.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) { siguiendo = false; return; }
+        anchoWrapper = wrapper.clientWidth || 300;
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         siguiendo = true;
+        arrastrando = false;
+        grid.style.transition = 'none';
     }, { passive: true });
 
-    area.addEventListener('touchend', (e) => {
+    wrapper.addEventListener('touchmove', (e) => {
+        if (!siguiendo) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        if (!arrastrando) {
+            if (Math.abs(dx) < UMBRAL_INTENCION && Math.abs(dy) < UMBRAL_INTENCION) return;
+            // Si el gesto resulta ser más vertical que horizontal, se deja de
+            // seguir del todo (no interfiere con scroll/pull vertical).
+            if (Math.abs(dy) >= Math.abs(dx)) { siguiendo = false; return; }
+            arrastrando = true;
+        }
+        // Sigue al dedo 1 a 1; si del lado hacia el que se arrastra no hay
+        // Movimiento disponible, se mueve con resistencia (menos), para que
+        // se note el "tope" incluso mientras se está arrastrando.
+        const direccion = dx < 0 ? 1 : -1;
+        const factor = hayPasoDisponibleSwipe(direccion) ? 1 : 0.35;
+        const desplazamiento = dx * factor;
+        grid.style.transform = `translateX(${desplazamiento}px)`;
+        grid.style.opacity = String(Math.max(0.4, 1 - Math.abs(desplazamiento) / anchoWrapper));
+    }, { passive: true });
+
+    wrapper.addEventListener('touchend', (e) => {
         if (!siguiendo) return;
         siguiendo = false;
-        const touch = e.changedTouches[0];
-        const dx = touch.clientX - startX;
-        const dy = touch.clientY - startY;
-        // Sólo cuenta como swipe de página si el movimiento es
-        // principalmente horizontal (para no confundirlo con un gesto
-        // vertical) y supera el umbral mínimo.
-        if (Math.abs(dx) < UMBRAL_X || Math.abs(dx) <= Math.abs(dy)) return;
-        if (dx < 0) {
-            moverCombo(1);
+        if (!arrastrando) return; // fue un toque/tap normal, no un swipe
+
+        const dx = e.changedTouches[0].clientX - startX;
+        const direccion = dx < 0 ? 1 : -1;
+        const cambiaDePagina = Math.abs(dx) >= UMBRAL_X && hayPasoDisponibleSwipe(direccion);
+
+        grid.style.transition = TRANSICION;
+
+        if (cambiaDePagina) {
+            const salida = direccion === 1 ? -anchoWrapper : anchoWrapper;
+            grid.style.transform = `translateX(${salida}px)`;
+            grid.style.opacity = '0';
+            setTimeout(() => {
+                moverCombo(direccion);
+                // El Movimiento nuevo arranca ya corrido hacia el lado
+                // opuesto de por donde "salió" el anterior, y de ahí entra
+                // deslizando hasta el centro.
+                grid.style.transition = 'none';
+                grid.style.transform = `translateX(${-salida}px)`;
+                grid.style.opacity = '0';
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        grid.style.transition = TRANSICION;
+                        grid.style.transform = 'translateX(0)';
+                        grid.style.opacity = '1';
+                    });
+                });
+            }, DURACION_MS);
         } else {
-            moverCombo(-1);
+            // No llegó al umbral, o no hay Movimiento de ese lado: rebota de
+            // vuelta al centro sin cambiar nada.
+            grid.style.transform = 'translateX(0)';
+            grid.style.opacity = '1';
         }
     }, { passive: true });
 })();
