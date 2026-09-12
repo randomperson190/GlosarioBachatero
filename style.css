@@ -82,6 +82,7 @@ body, html {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-left: none;
+    padding-left: 6px;
 }
 
 .reset-btn {
@@ -177,6 +178,7 @@ body, html {
     text-overflow: ellipsis;
     white-space: nowrap;
     display: block;
+    /* padding-left: 0px; */
 }
 
 #song-dropdown-container .dropdown-selected {
@@ -424,7 +426,7 @@ body, html {
     border-radius: 50%;
     flex-shrink: 0;
     margin-top: 1px;
-    margin-right: 10px;
+    margin-right: 8px;
     vertical-align: middle;
     position: relative;
     top: -1px;
@@ -509,7 +511,7 @@ body, html {
    (mismo color ya usado en la app para A-Z/BPM activo) como representativo
    de esta función. Al lado, un botón ⭐ SUELTO (no despliega nada): guarda
    la Figura actual en la lista que esté seleccionada en el menú. */
-#fav-list-dropdown-container { min-width: 0; width: 210px; flex: 0 0 210px; }
+#fav-list-dropdown-container {min-width: 0;width: 149px;flex: 0 0 85px;}
 #fav-list-dropdown-container .dropdown-selected {
     height: 35px;
     background-color: #da820d;
@@ -1390,11 +1392,14 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
         padding: 5px 5px;
         gap: 5px;
         justify-content: space-between;
+        padding-top: 5px;
     }
     #position-panel {
         padding: 2px 5px;
         gap: 5px;
         flex-wrap: nowrap;
+        padding-top: 1px;
+        padding-bottom: 1px;
     }
     #posini-dropdown-container, #posfin-dropdown-container {
         max-width: none;
@@ -1402,13 +1407,16 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
     #ui-panel {
         flex-direction: column;
         gap: 4px;
-        padding: 3px 5px;
+        padding: 5px 5px;
+        padding-top: 4px;
+        padding-bottom: 4px;
     }
     .song-selector-group {
         flex-wrap: nowrap;
         width: 100%;
         gap: 5px;
         justify-content: space-between;
+        padding-bottom: 5px;
     }
     .controls-box {
         flex-wrap: nowrap;
