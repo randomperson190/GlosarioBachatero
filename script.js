@@ -2989,6 +2989,45 @@ nextPageBtn.onclick = () => moverCombo(1);
 if (videoPrevBtn) videoPrevBtn.onclick = () => moverCombo(-1);
 if (videoNextBtn) videoNextBtn.onclick = () => moverCombo(1);
 
+// ===== SWIPE HORIZONTAL SOBRE EL VIDEO (sólo táctil) =====
+// Deslizar hacia la izquierda = siguiente Movimiento (si hay), hacia la
+// derecha = anterior (si hay) — mismo destino que las flechas < > /
+// video-prev-btn / video-next-btn, moverCombo ya se encarga de no hacer
+// nada si no hay página anterior/siguiente disponible.
+(function() {
+    const area = document.getElementById('video-center-wrapper');
+    if (!area) return;
+
+    const UMBRAL_X = 50; // píxeles mínimos horizontales para contar como swipe
+    let startX = 0;
+    let startY = 0;
+    let siguiendo = false;
+
+    area.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { siguiendo = false; return; }
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        siguiendo = true;
+    }, { passive: true });
+
+    area.addEventListener('touchend', (e) => {
+        if (!siguiendo) return;
+        siguiendo = false;
+        const touch = e.changedTouches[0];
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        // Sólo cuenta como swipe de página si el movimiento es
+        // principalmente horizontal (para no confundirlo con un gesto
+        // vertical) y supera el umbral mínimo.
+        if (Math.abs(dx) < UMBRAL_X || Math.abs(dx) <= Math.abs(dy)) return;
+        if (dx < 0) {
+            moverCombo(1);
+        } else {
+            moverCombo(-1);
+        }
+    }, { passive: true });
+})();
+
 // ===== INPUT DE MOVIMIENTO (escribir un número para ir directo ahí) =====
 (function () {
     const input = document.getElementById('page-indicator-input');
@@ -3779,11 +3818,30 @@ window.appReadyPromise = iniciarApp();
     const indicator = document.getElementById('pull-indicator');
     if (!indicator) return;
 
+    // Con algún desplegable (Figura, Canción, Posición, el menú ☰, el
+    // buscador de Movimiento, la lista de favoritos) o el modal de Atajos
+    // de teclado abiertos, scrollear/arrastrar hacia abajo DENTRO de ese
+    // panel no debe disparar el "pull to reload" de toda la página — sólo
+    // tiene sentido estando libre de menús y submenús.
+    const PANELES_MENU = [
+        'fig-options-panel', 'song-options-panel', 'ver-options-panel',
+        'posini-options-panel', 'posfin-options-panel', 'menu-options-panel',
+        'movsearch-options-panel', 'fav-list-options-panel',
+    ];
+    function hayMenuOAtajosAbiertos() {
+        if (PANELES_MENU.some(id => {
+            const el = document.getElementById(id);
+            return el && el.style.display === 'flex';
+        })) return true;
+        const hotkeysModal = document.getElementById('hotkeys-modal-overlay');
+        return !!(hotkeysModal && hotkeysModal.style.display === 'flex');
+    }
+
     let startY = 0;
     let pulling = false;
 
     document.addEventListener('touchstart', (e) => {
-        if (window.scrollY === 0 && e.touches.length === 1) {
+        if (window.scrollY === 0 && e.touches.length === 1 && !hayMenuOAtajosAbiertos()) {
             startY = e.touches[0].clientY;
             pulling = true;
         }
@@ -3791,6 +3849,14 @@ window.appReadyPromise = iniciarApp();
 
     document.addEventListener('touchmove', (e) => {
         if (!pulling) return;
+        // Si un menú se abrió recién durante el gesto (ej. tocaste un botón
+        // y arrastraste el dedo), se cancela el pull en vez de completarlo.
+        if (hayMenuOAtajosAbiertos()) {
+            pulling = false;
+            indicator.style.top = '-60px';
+            indicator.classList.remove('pull-spinning');
+            return;
+        }
         const dist = Math.max(0, e.touches[0].clientY - startY);
         if (dist > 0) {
             const progress = Math.min(dist / THRESHOLD, 1);
@@ -3806,6 +3872,12 @@ window.appReadyPromise = iniciarApp();
 
     document.addEventListener('touchend', (e) => {
         if (!pulling) return;
+        pulling = false;
+        if (hayMenuOAtajosAbiertos()) {
+            indicator.style.top = '-60px';
+            indicator.classList.remove('pull-spinning');
+            return;
+        }
         const dist = e.changedTouches[0].clientY - startY;
         if (dist >= THRESHOLD) {
             indicator.style.top = '12px';
@@ -3815,6 +3887,5 @@ window.appReadyPromise = iniciarApp();
             indicator.style.top = '-60px';
             indicator.classList.remove('pull-spinning');
         }
-        pulling = false;
     }, { passive: true });
 })();
