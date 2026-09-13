@@ -744,6 +744,14 @@ body, html {
 .note-btn:active:not(:disabled) { filter: brightness(1.6); }
 .note-btn.active { background-color: #4a3b00; border-color: #ffd54f; color: #ffe082; }
 
+/* Ícono de la lupa (buscador de Movimiento, 🔍/L): resaltado en celeste
+   cuando hay una búsqueda de texto libre aplicada (ver
+   filterMovSearchTexto / actualizarEstadoBotonMovSearch), para que se note
+   de un vistazo que la Lupa tiene algo cargado sin tener que abrirla —
+   mismo tipo de resalte que usan ⭐/🙈/📝, en un color propio para no
+   confundirse con esos ni con el filtro de Figura. */
+#movsearch-btn.active { background-color: #00343d; border-color: #0f9faf; color: #0f9faf; }
+
 /* El ícono de la lupa (buscar Movimiento por código), el de Ocultar
    Movimiento (🙈), el de Anotar Nota (📝) y el de Agregar la Figura actual
    a la lista (⭐) comparten el mismo efecto al pasar el mouse por encima. */
