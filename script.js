@@ -1199,7 +1199,10 @@ function renderDificultadList() {
     });
 }
 
-function closeAllDropdowns() {
+// opts.skipSync: no tocar el historial del navegador acá (lo usa
+// toggleDropdown, que sincroniza una sola vez al final, después de cerrar Y
+// de eventualmente volver a abrir — ver más abajo).
+function closeAllDropdowns(opts) {
     document.getElementById('fig-options-panel').style.display = 'none';
     document.getElementById('song-options-panel').style.display = 'none';
     document.getElementById('ver-options-panel').style.display = 'none';
@@ -1216,6 +1219,8 @@ function closeAllDropdowns() {
         const input = document.getElementById(id);
         if (input) input.value = '';
     });
+
+    if (!opts || !opts.skipSync) sincronizarHistorialOverlay();
 }
 
 // Si el panel pasado ya estaba abierto, clickear su mismo botón lo cierra
@@ -1223,12 +1228,70 @@ function closeAllDropdowns() {
 function toggleDropdown(panelId, openFn) {
     const panel = document.getElementById(panelId);
     const yaEstabaAbierto = panel.style.display === 'flex';
-    closeAllDropdowns();
+    closeAllDropdowns({ skipSync: true });
     if (!yaEstabaAbierto) {
         panel.style.display = 'flex';
         if (openFn) openFn();
     }
+    // Se sincroniza una sola vez acá, ya con el estado final asentado (abierto
+    // otro desplegable distinto, o cerrado del todo) — así cambiar de un
+    // desplegable a otro no hace un "cerrar + abrir" en el historial (que
+    // dejaría entradas de más), sino que no toca el historial si seguimos
+    // con algo abierto todo el tiempo.
+    sincronizarHistorialOverlay();
 }
+
+// ===== BOTÓN "ATRÁS" DEL TELÉFONO: cierra desplegables/menús en vez de salir =====
+// Cada vez que se abre un desplegable (Figura, Canción, Dificultad, Posición
+// Inicial/Final, el menú ☰, el buscador de Movimiento, la lista de
+// Favoritos) o el modal de Atajos de teclado, se agrega una entrada extra al
+// historial del navegador. Así, si el usuario presiona "atrás" (el botón
+// físico/gesto del teléfono) con alguno de esos abiertos, en vez de salir de
+// la app lo que hace es "gastar" esa entrada extra: el evento popstate
+// cierra el desplegable/modal y la app se queda donde estaba. Si se cierra
+// de la forma normal (clickeando afuera, eligiendo una opción, la X, etc.),
+// se vuelve atrás en el historial en silencio para sacar esa entrada extra,
+// así la PRÓXIMA vez que se presione "atrás" si actúa como atrás real.
+let overlayHistoryPushed = false;
+
+// Todos los paneles que cierra closeAllDropdowns() (incluye el menú ☰, que
+// no tiene lista navegable por teclado y por eso no está en
+// DROPDOWN_PANEL_TO_LIST — hay que chequearlo aparte).
+const PANELES_MENU_TODOS = [
+    'fig-options-panel', 'song-options-panel', 'ver-options-panel',
+    'posini-options-panel', 'posfin-options-panel', 'menu-options-panel',
+    'movsearch-options-panel', 'fav-list-options-panel',
+];
+
+function hayAlgunOverlayAbierto() {
+    if (PANELES_MENU_TODOS.some(id => {
+        const el = document.getElementById(id);
+        return el && el.style.display === 'flex';
+    })) return true;
+    const hotkeysModal = document.getElementById('hotkeys-modal-overlay');
+    return !!(hotkeysModal && hotkeysModal.style.display === 'flex');
+}
+
+function sincronizarHistorialOverlay() {
+    const abierto = hayAlgunOverlayAbierto();
+    if (abierto && !overlayHistoryPushed) {
+        overlayHistoryPushed = true;
+        history.pushState({ overlayGlosario: true }, '');
+    } else if (!abierto && overlayHistoryPushed) {
+        overlayHistoryPushed = false;
+        history.back();
+    }
+}
+
+window.addEventListener('popstate', () => {
+    // Si no habíamos agregado nosotros esa entrada, este "atrás" es un atrás
+    // real de la navegación (no nuestro): no hay nada que cerrar acá.
+    if (!overlayHistoryPushed) return;
+    overlayHistoryPushed = false;
+    closeAllDropdowns({ skipSync: true });
+    const hotkeysModal = document.getElementById('hotkeys-modal-overlay');
+    if (hotkeysModal) hotkeysModal.style.display = 'none';
+});
 
 // ===== NAVEGACIÓN POR TECLADO DENTRO DE UN DESPLEGABLE ABIERTO =====
 // Mapa panel -> lista, para saber cuál está abierto y sobre qué lista mover
@@ -1499,10 +1562,11 @@ function fijarFiltroFiguraComponente(valor) {
 // terminaste en una posición y la usás como punto de partida del próximo
 // movimiento (o viceversa), sin tener que ir a buscarla de nuevo en los
 // desplegables.
-document.getElementById('posini-swap-btn').onclick = () => {
+document.getElementById('posini-swap-btn').onclick = (e) => {
     if (combosData.length === 0) return;
+    if (e.currentTarget.disabled) return;
     const nuevaPosIni = valorActualDelVideo('posFin');
-    if (nuevaPosIni === null) return;
+    if (nuevaPosIni === null || nuevaPosIni === '') return;
     if (isPlaying || !isFirstAction) mutearParaCarga();
     filterPosIni = nuevaPosIni;
     filterPosFin = null;
@@ -1515,10 +1579,11 @@ document.getElementById('posini-swap-btn').onclick = () => {
     renderPosFinList(document.getElementById('posfin-search').value);
 };
 
-document.getElementById('posfin-swap-btn').onclick = () => {
+document.getElementById('posfin-swap-btn').onclick = (e) => {
     if (combosData.length === 0) return;
+    if (e.currentTarget.disabled) return;
     const nuevaPosFin = valorActualDelVideo('posIni');
-    if (nuevaPosFin === null) return;
+    if (nuevaPosFin === null || nuevaPosFin === '') return;
     if (isPlaying || !isFirstAction) mutearParaCarga();
     filterPosFin = nuevaPosFin;
     filterPosIni = null;
@@ -1530,6 +1595,37 @@ document.getElementById('posfin-swap-btn').onclick = () => {
     renderPosIniList(document.getElementById('posini-search').value);
     renderPosFinList(document.getElementById('posfin-search').value);
 };
+
+// ===== ¿SE PUEDE ENCADENAR LA POSICIÓN? (botones de encadenar, arriba) =====
+// Un botón de encadenar Posición sólo tiene sentido si:
+// 1) El video actual realmente tiene, en el lado que se va a copiar, una
+//    Posición con nombre propio (si es "" -no tiene nombre propio, "---"-
+//    no hay nada que encadenar), y
+// 2) Aplicando ese encadenamiento (fijar esa Posición del lado destino y
+//    resetear la del otro lado, dejando Figura y Dificultad como están)
+//    todavía queda al menos un Movimiento visible — si no, sería encadenar
+//    hacia un callejón sin salida por culpa de otro filtro ya activo
+//    (Figura y/o Dificultad).
+// dimensionDestino: 'posIni' (para posini-swap-btn) o 'posFin' (para
+// posfin-swap-btn).
+function swapEncadenarDisponible(dimensionDestino) {
+    const dimensionOrigen = dimensionDestino === 'posIni' ? 'posFin' : 'posIni';
+    const valor = valorActualDelVideo(dimensionOrigen);
+    if (valor === null || valor === '') return false; // no hay Posición (con nombre) para encadenar
+    const prevPosIni = filterPosIni;
+    const prevPosFin = filterPosFin;
+    if (dimensionDestino === 'posIni') {
+        filterPosIni = valor;
+        filterPosFin = null;
+    } else {
+        filterPosFin = valor;
+        filterPosIni = null;
+    }
+    const disponible = combosFiltrados(null).length > 0;
+    filterPosIni = prevPosIni;
+    filterPosFin = prevPosFin;
+    return disponible;
+}
 
 // ===== BUSCADOR DE MOVIMIENTOS POR CÓDIGO (🔍, hotkey B) =====
 // Junta TODOS los Movimientos existentes (combinación + dificultad +
@@ -2880,6 +2976,11 @@ function actualizarPaginacion() {
         const spanFin = posFinSwapBtn ? posFinSwapBtn.querySelector('span') : null;
         if (spanIni) spanIni.innerText = codigoDePosicion(valorActualDelVideo('posFin'));
         if (spanFin) spanFin.innerText = codigoDePosicion(valorActualDelVideo('posIni'));
+        // Inhabilitados (en gris) si no hay Posición (con nombre propio) para
+        // encadenar, o si encadenarla dejaría 0 Movimientos por culpa de otro
+        // filtro ya activo (Figura y/o Dificultad) — ver swapEncadenarDisponible.
+        if (posIniSwapBtn) posIniSwapBtn.disabled = !swapEncadenarDisponible('posIni');
+        if (posFinSwapBtn) posFinSwapBtn.disabled = !swapEncadenarDisponible('posFin');
     }
 }
 
@@ -3643,10 +3744,14 @@ document.getElementById('menu-hotkeys-item').onclick = () => {
 };
 document.getElementById('hotkeys-modal-close').onclick = () => {
     if (hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'none';
+    sincronizarHistorialOverlay();
 };
 if (hotkeysModalOverlay) {
     hotkeysModalOverlay.onclick = (e) => {
-        if (e.target === hotkeysModalOverlay) hotkeysModalOverlay.style.display = 'none';
+        if (e.target === hotkeysModalOverlay) {
+            hotkeysModalOverlay.style.display = 'none';
+            sincronizarHistorialOverlay();
+        }
     };
 }
 document.getElementById('hotkeys-modal').onclick = e => e.stopPropagation();
@@ -3707,7 +3812,7 @@ document.addEventListener('keydown', (e) => {
     // mientras se está leyendo la lista.
     const hotkeysModal = document.getElementById('hotkeys-modal-overlay');
     if (hotkeysModal && hotkeysModal.style.display === 'flex') {
-        if (key === 'escape') { e.preventDefault(); hotkeysModal.style.display = 'none'; }
+        if (key === 'escape') { e.preventDefault(); hotkeysModal.style.display = 'none'; sincronizarHistorialOverlay(); }
         return;
     }
 
@@ -3895,19 +4000,9 @@ window.appReadyPromise = iniciarApp();
     // de teclado abiertos, scrollear/arrastrar hacia abajo DENTRO de ese
     // panel no debe disparar el "pull to reload" de toda la página — sólo
     // tiene sentido estando libre de menús y submenús.
-    const PANELES_MENU = [
-        'fig-options-panel', 'song-options-panel', 'ver-options-panel',
-        'posini-options-panel', 'posfin-options-panel', 'menu-options-panel',
-        'movsearch-options-panel', 'fav-list-options-panel',
-    ];
-    function hayMenuOAtajosAbiertos() {
-        if (PANELES_MENU.some(id => {
-            const el = document.getElementById(id);
-            return el && el.style.display === 'flex';
-        })) return true;
-        const hotkeysModal = document.getElementById('hotkeys-modal-overlay');
-        return !!(hotkeysModal && hotkeysModal.style.display === 'flex');
-    }
+    // Reutiliza el mismo chequeo que usa el manejo del botón "atrás" del
+    // teléfono (ver hayAlgunOverlayAbierto, más arriba en este archivo).
+    const hayMenuOAtajosAbiertos = hayAlgunOverlayAbierto;
 
     let startY = 0;
     let pulling = false;

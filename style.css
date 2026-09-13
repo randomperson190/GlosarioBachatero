@@ -1136,6 +1136,21 @@ input[type="number"]::-moz-inner-spin-button { display: none; }
 }
 .pos-swap-btn:active { filter: brightness(1.6); }
 
+/* Inhabilitado: no hay Posición (con nombre propio) para encadenar, o
+   encadenarla dejaría 0 Movimientos por culpa de otro filtro ya activo (ver
+   swapEncadenarDisponible en script.js). Gris, sin brillo al tocar/pasar el
+   mouse, y con cursor de "no permitido". */
+.pos-swap-btn:disabled {
+    background-color: rgba(120, 120, 120, 0.45) !important;
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+@media (hover: hover) {
+    .pos-swap-btn:disabled:hover { opacity: 0.55; filter: none; }
+}
+.pos-swap-btn:disabled:active { filter: none; }
+
 /* Círculos verdes clickeables: uno por cada "parte" de la Figura del video
    actual (una sola si es singular, varias si es compuesta "A + B", ver
    componentesDeFigura en script.js), cada uno con la primera letra de esa
