@@ -265,6 +265,25 @@ body, html {
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
 }
 
+/* Ítem "🔎 Todas las que contengan..." que encabeza los desplegables
+   buscables de Figura / Posición Inicial / Posición Final cuando hay texto
+   tipeado: aplica ese texto como filtro de "texto libre" (agrupa todos los
+   valores que lo contengan) en vez de tener que elegir uno exacto. */
+.dropdown-item-texto-libre {
+    font-style: italic;
+    color: #ffd54a;
+    background-color: rgba(255, 213, 74, 0.08);
+    border-bottom: 1px solid #555 !important;
+}
+.dropdown-item-texto-libre:hover {
+    background-color: rgba(255, 213, 74, 0.18);
+}
+.dropdown-item-texto-libre.selected {
+    background-color: rgba(255, 213, 74, 0.28) !important;
+    color: #ffffff !important;
+    font-weight: bold;
+}
+
 #fig-options-panel .dropdown-search:focus { border: 1px solid #004400; }
 #fig-options-panel .dropdown-item.selected { background-color: #003300; color: #ffffff; font-weight: bold; }
 #song-options-panel .dropdown-search:focus { border-color: #ffcc00; }
@@ -407,16 +426,28 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.35;
-    filter: grayscale(85%);
+    opacity: 0.45;
+    filter: grayscale(55%);
     transition: filter 0.15s, opacity 0.15s;
 }
-.pos-igual-btn:hover { filter: grayscale(85%) brightness(1.3); }
+.pos-igual-btn:hover { filter: grayscale(55%) brightness(1.3); }
 .pos-igual-btn.active {
     opacity: 1;
     filter: none;
+    border-color: #564e4e;
 }
 .pos-igual-btn.active:hover { filter: brightness(1.15); }
+/* Inhabilitado (ver actualizarEstadoBotonPosIgual): activarlo ahora mismo no
+   dejaría ningún Movimiento visible con los demás filtros ya puestos. Usa el
+   mismo aspecto apagado que tenía ANTES el estado "disponible" (más oscuro
+   que el "disponible" de arriba, pero sin llegar a quedar casi invisible),
+   y sin reaccionar al hover/tap. */
+.pos-igual-btn:disabled {
+    opacity: 0.35;
+    filter: grayscale(85%);
+    cursor: default;
+    pointer-events: none;
+}
 
 #posini-dropdown-container .dropdown-selected {
     background-color: #060606;
@@ -491,23 +522,49 @@ body, html {
    patrón que el menú ☰: botón + panel absoluto que se abre debajo. */
 .movsearch-container {position: relative;flex-shrink: 0;/* padding-top: 1px; *//* padding-bottom: 3px; *//* height: 34px; *//* font-size: 22px; */}
 
+/* "position: fixed" anclado por su lado DERECHO al lado derecho del botón
+   (calculado en JS por posicionarMovsearchPanel), igual patrón que
+   #fav-list-options-panel: así el panel de 320px de ancho siempre entra
+   completo en la pantalla y se abre hacia la izquierda, en vez de salirse
+   por el borde derecho cuando el botón queda cerca de ese borde (como
+   pasaba con el viejo "left: 0" relativo al botón angosto). */
 .movsearch-options {
     display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    margin-top: 6px;
+    position: fixed;
+    top: 0;
+    left: auto;
+    right: 0;
+    margin-top: 0;
     background-color: #222;
     border: 1px solid #444;
     border-radius: 6px;
     z-index: 150;
     box-shadow: 0 4px 12px rgba(0,0,0,0.8);
-    width: 240px;
+    width: min(320px, 92vw);
     max-height: 350px;
     flex-direction: column;
     overflow: hidden;
 }
 #movsearch-list .dropdown-item.selected { background-color: #003300; color: #ffffff; font-weight: bold; }
+
+/* Ítems del buscador de Movimiento: código arriba (como antes) + una
+   segunda línea, más chica y apagada, con Posición Inicial → Figura →
+   Posición Final, para orientar cuando el resultado vino de una búsqueda
+   por texto libre y no por código. */
+.movsearch-item-code {
+    font-size: 14px;
+}
+.movsearch-item-dif {
+    color: #c084fc;
+    font-weight: bold;
+}
+.movsearch-item-desc {
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #aaaaaa;
+    white-space: normal;
+}
 
 /* Botones de Deshacer (↶) / Rehacer (↷) de filtros, mismo estilo que los
    botones de orden A-Z / BPM de al lado, deshabilitados (grisados) cuando

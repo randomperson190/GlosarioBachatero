@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="style.css?v=92">
+    <link rel="stylesheet" href="style.css?v=99">
 </head>
 <body>
 
@@ -101,9 +101,9 @@
             </div>
             <button class="history-btn note-btn" id="fig-note-btn" title="Anotar una nota para el movimiento actual (N)">📝</button>
             <div class="movsearch-container" id="movsearch-container">
-                <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código (L)">🔍</button>
+                <button class="history-btn" id="movsearch-btn" title="Buscar Movimiento por código o texto libre en Dificultad/Posición/Figura (L)">🔍</button>
                 <div class="movsearch-options" id="movsearch-options-panel">
-                    <input type="text" class="dropdown-search" id="movsearch-search" placeholder="🔍 Buscar por código (ej. ART)...">
+                    <input type="text" class="dropdown-search" id="movsearch-search" placeholder="🔍 Código (ART) o texto libre...">
                     <div class="dropdown-list" id="movsearch-list"></div>
                 </div>
             </div>
@@ -160,6 +160,9 @@
                     <div class="menu-item" id="menu-export-item" title="Genera un texto copiable con tus favoritos, tus Figuras ocultas y tus notas, para guardarlo como respaldo">
                         <span class="menu-item-label">⬆️ Exportar mis favoritos, ocultos y notas</span>
                     </div>
+                    <div class="menu-item" id="menu-clear-favs-item" title="Borra tus listas de favoritos, tus Figuras ocultas y tus notas guardadas en este dispositivo (no afecta el modo avión descargado)">
+                        <span class="menu-item-label">🗑️ Borrar mis favoritos, ocultos y notas</span>
+                    </div>
                     <div class="menu-item" id="menu-clear-cache-item" title="Borra todo lo guardado (incluido el modo avión) y recarga la última versión">
                         <span class="menu-item-label">🧹 Borrar caché y actualizar</span>
                     </div>
@@ -207,6 +210,6 @@
         <div id="offline-cache-track"><div id="offline-cache-bar"></div></div>
     </div>
 
-    <script src="script.js?v=72"></script>
+    <script src="script.js?v=75"></script>
 </body>
 </html>

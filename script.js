@@ -410,14 +410,87 @@ function componentesDeFigura(figuraStr) {
     return figuraStr.split('+').map(s => s.trim()).filter(Boolean);
 }
 
-// Un combo "coincide" con un valor de filtro de Figura si ese valor es
-// exactamente su figura completa (compuesta o no, permite elegir
-// "Gancho + Traslado" a propósito) O si es uno de los movimientos
-// individuales que la componen (permite que "Gancho" o "Traslado" por
-// separado también encuentren esta toma compuesta).
+// ===== FILTROS DE "TEXTO LIBRE" (estilo __Reordenador.py) =====
+// Además de elegir un valor exacto y preconfigurado en los desplegables de
+// Figura / Posición Inicial / Posición Final, se puede escribir cualquier
+// texto y confirmarlo (Enter, o clickeando el ítem "🔎 Todas las que
+// contengan...") para que el filtro pase a ser "contiene este texto" en vez
+// de "es exactamente este valor". Así, escribir "Doble Péndulo" agrupa de
+// una sola vez a "Doble Péndulo Cruzado", "Doble Péndulo Paralelo", etc.
+// Estos filtros se representan con un objeto {__texto:true, texto, original}
+// en vez de un string simple, para poder distinguirlos de una selección
+// exacta en cualquier punto del código que compare el valor del filtro.
+function esFiltroTexto(valor) {
+    return valor !== null && typeof valor === 'object' && valor.__texto === true;
+}
+
+function crearFiltroTexto(textoOriginal) {
+    const original = (textoOriginal || '').trim();
+    if (original === '') return null;
+    return { __texto: true, texto: normalizarTexto(original), original };
+}
+
+// Aplica el texto tipeado en el buscador de Figura / Posición Inicial /
+// Posición Final como filtro de "texto libre" (ver esFiltroTexto), en vez
+// de tener que elegir un valor exacto de la lista. Se dispara al clickear
+// el ítem "🔎 Todas las que contengan..." o al apretar Enter con el
+// desplegable abierto y nada resaltado por teclado. Devuelve false (sin
+// tocar nada) si el texto está vacío, para que quien la llama pueda hacer
+// un fallback razonable (por ejemplo, confirmar el ítem resaltado si lo hay).
+function aplicarFiltroTextoLibre(dimension, textoOriginal) {
+    const filtro = crearFiltroTexto(textoOriginal);
+    if (!filtro) return false;
+    if (dimension === 'figura') {
+        filterFigura = filtro;
+        ultimaDimensionSeleccionada = 'figura';
+    } else if (dimension === 'posIni') {
+        filterPosIni = filtro;
+        // Con "=" activado, Posición Inicial y Final van siempre atadas.
+        if (filtroPosIgual) filterPosFin = filtro;
+        ultimaDimensionSeleccionada = 'posIni';
+    } else if (dimension === 'posFin') {
+        filterPosFin = filtro;
+        if (filtroPosIgual) filterPosIni = filtro;
+        ultimaDimensionSeleccionada = 'posFin';
+    } else {
+        return false;
+    }
+    closeAllDropdowns();
+    recalcularComboActual();
+    aplicarCambioVisual();
+    registrarHistorialFiltros();
+    return true;
+}
+
+// Un combo "coincide" con un valor de filtro de Figura si:
+// - el filtro es de texto libre: alcanza con que el texto aparezca en
+//   cualquier parte de la Figura completa (sin importar tildes/mayúsculas);
+// - si no, el valor es exactamente su figura completa (compuesta o no,
+//   permite elegir "Gancho + Traslado" a propósito) O es uno de los
+//   movimientos individuales que la componen (permite que "Gancho" o
+//   "Traslado" por separado también encuentren esta toma compuesta).
 function comboCoincideFigura(combo, valor) {
+    if (esFiltroTexto(valor)) {
+        return normalizarTexto(combo.figura).includes(valor.texto);
+    }
     if (combo.figura === valor) return true;
     return componentesDeFigura(combo.figura).includes(valor);
+}
+
+// Mismo criterio que comboCoincideFigura, pero para un campo de valor único
+// (Posición Inicial / Posición Final: no tienen componentes "+").
+function coincideValorPos(valorCombo, filtro) {
+    if (esFiltroTexto(filtro)) {
+        return normalizarTexto(valorCombo).includes(filtro.texto);
+    }
+    return valorCombo === filtro;
+}
+
+// Texto a mostrar en el "-selected" de un desplegable para el valor de un
+// filtro (exacto o de texto libre).
+function etiquetaValorFiltro(valor) {
+    if (esFiltroTexto(valor)) return `🔎 "${valor.original}"`;
+    return valor === '' ? '---' : valor;
 }
 
 // Cuenta cuántas tomas de una Dificultad puntual de un combo quedan
@@ -480,8 +553,8 @@ function combosFiltrados(excluirDimension) {
         // cumplen esta condición).
         if (filtroPosIgual && c.posIni !== c.posFin) return false;
         if (excluirDimension !== 'figura' && filterFigura !== null && !comboCoincideFigura(c, filterFigura)) return false;
-        if (!excluirPosIni && filterPosIni !== null && c.posIni !== filterPosIni) return false;
-        if (!excluirPosFin && filterPosFin !== null && c.posFin !== filterPosFin) return false;
+        if (!excluirPosIni && filterPosIni !== null && !coincideValorPos(c.posIni, filterPosIni)) return false;
+        if (!excluirPosFin && filterPosFin !== null && !coincideValorPos(c.posFin, filterPosFin)) return false;
         if (excluirDimension !== 'dificultad' && filterDificultad !== null && !(c.dificultades && c.dificultades[filterDificultad] && c.dificultades[filterDificultad].length)) return false;
         if (!comboTieneTomaVisible(c, hiddenSteps, dificultadParaVisibilidad)) return false;
         return true;
@@ -628,16 +701,16 @@ function actualizarEtiquetasFiltros(candidatos) {
     if (filterFigura === null) {
         setDropdownSelectedHTML('fig-selected', `💃 Cualquier Figura [🌈]`);
     } else {
-        setDropdownSelectedHTML('fig-selected', `💃 ${filterFigura === '' ? '---' : filterFigura}`);
+        setDropdownSelectedHTML('fig-selected', `💃 ${etiquetaValorFiltro(filterFigura)}`);
     }
 
     setDropdownSelectedHTML('posini-selected', (filterPosIni === null)
         ? `<span class="pos-dot pos-dot-ini"></span>Cualquier Posición Inicial [🌈]`
-        : `<span class="pos-dot pos-dot-ini"></span>${filterPosIni === '' ? '---' : filterPosIni}`);
+        : `<span class="pos-dot pos-dot-ini"></span>${etiquetaValorFiltro(filterPosIni)}`);
 
     setDropdownSelectedHTML('posfin-selected', (filterPosFin === null)
         ? `<span class="pos-dot pos-dot-fin"></span>Cualquier Posición Final [🌈]`
-        : `<span class="pos-dot pos-dot-fin"></span>${filterPosFin === '' ? '---' : filterPosFin}`);
+        : `<span class="pos-dot pos-dot-fin"></span>${etiquetaValorFiltro(filterPosFin)}`);
 }
 
 // Carga figuras-manifest.json (generado con generar-manifest.html) y arranca la app.
@@ -917,7 +990,10 @@ function renderGrid() {
             grupoCirculosFigura.className = 'figura-circle-group';
             partesFigura.forEach(parte => {
                 const circuloFigura = document.createElement('button');
-                circuloFigura.className = `figura-circle${filterFigura === parte ? ' figura-circle-activo' : ''}`;
+                const circuloActivo = esFiltroTexto(filterFigura)
+                    ? normalizarTexto(parte).includes(filterFigura.texto)
+                    : filterFigura === parte;
+                circuloFigura.className = `figura-circle${circuloActivo ? ' figura-circle-activo' : ''}`;
                 circuloFigura.innerText = parte.charAt(0).toUpperCase();
                 circuloFigura.title = `Fijar / quitar filtro de Figura: ${parte}`;
                 circuloFigura.onclick = (e) => { e.stopPropagation(); fijarFiltroFiguraComponente(parte); };
@@ -1013,6 +1089,28 @@ function getAllVideos() {
 }
 
 // ===== DROPDOWNS =====
+// Arma (si corresponde) el ítem especial "🔎 Todas las que contengan..." que
+// encabeza la lista de un desplegable buscable, cuando hay texto tipeado:
+// clickearlo (o Enter estando el campo enfocado, sin haber resaltado ningún
+// otro ítem con las flechas) aplica el texto tal cual como filtro de "texto
+// libre" — ver aplicarFiltroTextoLibre. cantidadCoincidencias es la cantidad
+// de Movimientos que ya cumplen el resto de filtros activos Y contienen ese
+// texto, para que se vea de antemano cuántos van a quedar.
+function htmlItemTextoLibre(searchTerm, cantidadCoincidencias, filtroActivo) {
+    const original = (searchTerm || '').trim();
+    if (original === '') return '';
+    const activo = esFiltroTexto(filtroActivo) && filtroActivo.texto === normalizarTexto(original);
+    const plural = cantidadCoincidencias === 1 ? '' : 's';
+    return `<div class="dropdown-item dropdown-item-texto-libre ${activo ? 'selected' : ''}" data-textolibre="1">
+        🔎 Todas las que contengan "${escaparHtml(original)}" (${cantidadCoincidencias} resultado${plural})
+    </div>`;
+}
+
+function escaparHtml(texto) {
+    return (texto || '').toString()
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function renderFigureList(searchTerm = "") {
     const listEl = document.getElementById('fig-list');
     const candidatos = combosFiltrados('figura');
@@ -1035,6 +1133,10 @@ function renderFigureList(searchTerm = "") {
     // para no confundirse con la figura real de valor "" (las que en el
     // nombre de archivo llevan "---" y se muestran acá también como "---").
     let html = `<div class="dropdown-item ${filterFigura === null ? 'selected' : ''}" data-any="1">💃 Cualquier Figura [🌈]</div>`;
+    if (terminoNormalizado !== '') {
+        const cantidad = candidatos.filter(c => normalizarTexto(c.figura).includes(terminoNormalizado)).length;
+        html += htmlItemTextoLibre(searchTerm, cantidad, filterFigura);
+    }
     if (valores.length > 0) {
         html += valores.map(f => `
             <div class="dropdown-item ${f === filterFigura ? 'selected' : ''}" data-value="${f}">
@@ -1043,7 +1145,10 @@ function renderFigureList(searchTerm = "") {
         `).join('');
     }
     listEl.innerHTML = html;
-    listEl.querySelectorAll('.dropdown-item').forEach(item => {
+    listEl.querySelectorAll('.dropdown-item[data-textolibre]').forEach(item => {
+        item.onclick = () => aplicarFiltroTextoLibre('figura', searchTerm);
+    });
+    listEl.querySelectorAll('.dropdown-item[data-any], .dropdown-item[data-value]').forEach(item => {
         item.onclick = () => {
             filterFigura = item.dataset.any === '1' ? null : item.dataset.value;
             ultimaDimensionSeleccionada = 'figura';
@@ -1068,13 +1173,20 @@ function renderPosIniList(searchTerm = "") {
     // para no confundirse con la posición real de valor "" (las que se
     // muestran acá como "---").
     let html = `<div class="dropdown-item ${filterPosIni === null ? 'selected' : ''}" data-any="1"><span class="pos-dot pos-dot-ini"></span>Cualquier Posición Inicial [🌈]</div>`;
+    if (terminoNormalizadoIni !== '') {
+        const cantidad = candidatos.filter(c => normalizarTexto(c.posIni).includes(terminoNormalizadoIni)).length;
+        html += htmlItemTextoLibre(searchTerm, cantidad, filterPosIni);
+    }
     if (valores.length > 0) {
         html += valores.map(p => `
             <div class="dropdown-item ${p === filterPosIni ? 'selected' : ''}" data-value="${p}"><span class="pos-dot pos-dot-ini"></span>${etiquetaPos(p)}</div>
         `).join('');
     }
     listEl.innerHTML = html;
-    listEl.querySelectorAll('.dropdown-item').forEach(item => {
+    listEl.querySelectorAll('.dropdown-item[data-textolibre]').forEach(item => {
+        item.onclick = () => aplicarFiltroTextoLibre('posIni', searchTerm);
+    });
+    listEl.querySelectorAll('.dropdown-item[data-any], .dropdown-item[data-value]').forEach(item => {
         item.onclick = () => {
             filterPosIni = item.dataset.any === '1' ? null : item.dataset.value;
             // Con "=" activado, Posición Inicial y Final van siempre atadas:
@@ -1099,13 +1211,20 @@ function renderPosFinList(searchTerm = "") {
         .sort((a, b) => etiquetaPos(a).localeCompare(etiquetaPos(b)));
 
     let html = `<div class="dropdown-item ${filterPosFin === null ? 'selected' : ''}" data-any="1"><span class="pos-dot pos-dot-fin"></span>Cualquier Posición Final [🌈]</div>`;
+    if (terminoNormalizadoFin !== '') {
+        const cantidad = candidatos.filter(c => normalizarTexto(c.posFin).includes(terminoNormalizadoFin)).length;
+        html += htmlItemTextoLibre(searchTerm, cantidad, filterPosFin);
+    }
     if (valores.length > 0) {
         html += valores.map(p => `
             <div class="dropdown-item ${p === filterPosFin ? 'selected' : ''}" data-value="${p}"><span class="pos-dot pos-dot-fin"></span>${etiquetaPos(p)}</div>
         `).join('');
     }
     listEl.innerHTML = html;
-    listEl.querySelectorAll('.dropdown-item').forEach(item => {
+    listEl.querySelectorAll('.dropdown-item[data-textolibre]').forEach(item => {
+        item.onclick = () => aplicarFiltroTextoLibre('posFin', searchTerm);
+    });
+    listEl.querySelectorAll('.dropdown-item[data-any], .dropdown-item[data-value]').forEach(item => {
         item.onclick = () => {
             filterPosFin = item.dataset.any === '1' ? null : item.dataset.value;
             // Idem: con "=" activado, fijar Posición Final también fija la
@@ -1212,13 +1331,14 @@ function closeAllDropdowns(opts) {
     document.getElementById('movsearch-options-panel').style.display = 'none';
     document.getElementById('fav-list-options-panel').style.display = 'none';
 
-    // Al cerrarse (desclickeado) cualquiera de los desplegables con buscador,
-    // se borra lo que había escrito ahí, para que la próxima vez que se abra
-    // arranque limpio en vez de seguir filtrado por la búsqueda anterior.
-    ['fig-search', 'posini-search', 'posfin-search', 'song-search', 'movsearch-search'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) input.value = '';
-    });
+    // Al cerrarse (desclickeado), sólo se borra lo escrito en el buscador de
+    // Canción. Los buscadores de Figura, Posición Inicial, Posición Final y
+    // Movimiento (🔍 / L) MANTIENEN el texto buscado la próxima vez que se
+    // abran (ver los onclick de sus "selected"/botón, que ya renderizan con
+    // el valor actual del input), hasta que se resetee esa dimensión con su
+    // ↺, con 🌈/F, o se lo reemplace escribiendo de cero.
+    const songSearchInput = document.getElementById('song-search');
+    if (songSearchInput) songSearchInput.value = '';
 
     if (!opts || !opts.skipSync) sincronizarHistorialOverlay();
 }
@@ -1304,6 +1424,21 @@ const DROPDOWN_PANEL_TO_LIST = {
     'song-options-panel': 'song-list',
     'movsearch-options-panel': 'movsearch-list',
     'fav-list-options-panel': 'fav-list-list',
+};
+
+// Sólo estos 3 desplegables (Figura / Posición Inicial / Posición Final)
+// soportan el filtro de "texto libre" al apretar Enter sin nada resaltado
+// (ver aplicarFiltroTextoLibre). Canción, Dificultad, Movimiento (código) y
+// Favoritos siguen funcionando como antes.
+const PANEL_A_DIMENSION_TEXTO_LIBRE = {
+    'fig-options-panel': 'figura',
+    'posini-options-panel': 'posIni',
+    'posfin-options-panel': 'posFin',
+};
+const DIMENSION_A_SEARCH_INPUT = {
+    'figura': 'fig-search',
+    'posIni': 'posini-search',
+    'posFin': 'posfin-search',
 };
 
 // Devuelve {panelId, listId} del desplegable de filtro/canción que esté
@@ -1396,6 +1531,7 @@ document.getElementById('ver-selected').onclick = (e) => {
 document.getElementById('fig-reset-btn').onclick = (e) => {
     e.stopPropagation();
     ultimaDimensionSeleccionada = 'figura';
+    document.getElementById('fig-search').value = '';
     if (filterFigura === null) return;
     if (isPlaying || !isFirstAction) mutearParaCarga();
     filterFigura = null;
@@ -1431,6 +1567,42 @@ document.getElementById('fig-combos-btn').onclick = (e) => {
     aplicarCambioVisual();
     registrarHistorialFiltros();
 };
+// ¿Activar "=" ahora mismo dejaría al menos un Movimiento visible, dados los
+// demás filtros ya puestos (Figura, Dificultad, Posición Inicial)? Simula la
+// misma normalización que hace el propio botón al activarse (si Posición
+// Inicial y Final difieren, Final pasa a valer lo mismo que Inicial), así
+// que alcanza con exigir c.posIni === c.posFin y, si había una Posición
+// Inicial fijada, que coincida con ella (la Final, tras la normalización,
+// pide exactamente lo mismo, por eso no hace falta chequearla aparte).
+function puedeActivarPosIgual() {
+    if (filtroPosIgual) return true; // ya activo: siempre se puede desactivar
+    if (combosData.length === 0) return true; // todavía no cargó nada: no bloquear de arranque
+    const hiddenSteps = mostrarFigurasOcultas ? [] : getHiddenSteps();
+    return combosData.some(c => {
+        if (typeof c.figura === 'string') {
+            const esCombo = c.figura.includes('+');
+            if (esCombo && !mostrarCombos) return false;
+            if (!esCombo && !mostrarFigurasIndividuales) return false;
+        }
+        if (c.posIni !== c.posFin) return false;
+        if (filterFigura !== null && !comboCoincideFigura(c, filterFigura)) return false;
+        if (filterPosIni !== null && !coincideValorPos(c.posIni, filterPosIni)) return false;
+        if (filterDificultad !== null && !(c.dificultades && c.dificultades[filterDificultad] && c.dificultades[filterDificultad].length)) return false;
+        if (!comboTieneTomaVisible(c, hiddenSteps, filterDificultad)) return false;
+        return true;
+    });
+}
+
+// Refresca la inhabilitación visual del botón "=": si no está activo y
+// activarlo no dejaría ningún Movimiento visible con los filtros ya puestos,
+// queda deshabilitado (más apagado, sin hover) hasta que esos otros filtros
+// cambien lo suficiente como para que sí haya alguno.
+function actualizarEstadoBotonPosIgual() {
+    const btn = document.getElementById('pos-igual-btn');
+    if (!btn) return;
+    btn.disabled = !filtroPosIgual && !puedeActivarPosIgual();
+}
+
 document.getElementById('pos-igual-btn').onclick = (e) => {
     e.stopPropagation();
     if (isPlaying || !isFirstAction) mutearParaCarga();
@@ -1461,6 +1633,7 @@ document.getElementById('ver-reset-btn').onclick = (e) => {
 document.getElementById('posini-reset-btn').onclick = (e) => {
     e.stopPropagation();
     ultimaDimensionSeleccionada = 'posIni';
+    document.getElementById('posini-search').value = '';
     if (filterPosIni === null) return;
     if (isPlaying || !isFirstAction) mutearParaCarga();
     filterPosIni = null;
@@ -1472,6 +1645,7 @@ document.getElementById('posini-reset-btn').onclick = (e) => {
 document.getElementById('posfin-reset-btn').onclick = (e) => {
     e.stopPropagation();
     ultimaDimensionSeleccionada = 'posFin';
+    document.getElementById('posfin-search').value = '';
     if (filterPosFin === null) return;
     if (isPlaying || !isFirstAction) mutearParaCarga();
     filterPosFin = null;
@@ -1643,7 +1817,16 @@ function listaMovimientosConCodigo() {
                 (dificultades[dif] || []).forEach((toma, variantIndex) => {
                     const info = extraerInfoArchivo(toma.file8t);
                     if (!info) return;
-                    lista.push({ comboId: combo.id, dificultad: dif, variantIndex, numero: info.numero, letras: info.letras });
+                    lista.push({
+                        comboId: combo.id,
+                        dificultad: dif,
+                        variantIndex,
+                        numero: info.numero,
+                        letras: info.letras,
+                        posIni: combo.posIni,
+                        figura: combo.figura,
+                        posFin: combo.posFin,
+                    });
                 });
             });
     });
@@ -1651,14 +1834,31 @@ function listaMovimientosConCodigo() {
     return lista;
 }
 
+// Búsqueda del 🔍 de Movimiento (L): además del código de 3 letras / número
+// de archivo (como antes), ahora también busca por texto libre (sin
+// importar tildes/mayúsculas, estilo __Reordenador.py) en Dificultad,
+// Posición Inicial, Figura y Posición Final combinados, sin necesidad de
+// que el texto tipeado coincida con ningún valor preconfigurado de esos
+// desplegables: alcanza con que aparezca en cualquier parte de esos campos.
 function renderMovSearchList(query) {
     const listEl = document.getElementById('movsearch-list');
     if (!listEl) return;
-    const q = (query || '').trim().toUpperCase();
+    const qRaw = (query || '').trim();
+    const qCodigo = qRaw.toUpperCase();
+    const qTexto = normalizarTexto(qRaw);
     const todos = listaMovimientosConCodigo();
-    const filtrados = q === '' ? todos : todos.filter(m => m.letras.includes(q) || m.numero.includes(q));
+    const etiquetaPosMov = (p) => (p === '' ? '---' : p);
+    const filtrados = qRaw === '' ? todos : todos.filter(m => {
+        if (m.letras.includes(qCodigo) || m.numero.includes(qCodigo)) return true;
+        const textoCombinado = normalizarTexto(`${m.dificultad} ${m.posIni} ${m.figura} ${m.posFin}`);
+        return textoCombinado.includes(qTexto);
+    });
     listEl.innerHTML = filtrados.length
-        ? filtrados.map(m => `<div class="dropdown-item" data-combo="${m.comboId}" data-dif="${m.dificultad}" data-variant="${m.variantIndex}">${m.numero} - ${m.letras}</div>`).join('')
+        ? filtrados.map(m => `
+            <div class="dropdown-item movsearch-item" data-combo="${m.comboId}" data-dif="${m.dificultad}" data-variant="${m.variantIndex}">
+                <div class="movsearch-item-code">${m.numero} - ${m.letras} <span class="movsearch-item-dif">[${m.dificultad}]</span></div>
+                <div class="movsearch-item-desc">${etiquetaPosMov(m.posIni)} → ${m.figura} → ${etiquetaPosMov(m.posFin)}</div>
+            </div>`).join('')
         : `<div class="dropdown-item" style="cursor:default;opacity:0.6;">Sin resultados</div>`;
     listEl.querySelectorAll('.dropdown-item[data-combo]').forEach(item => {
         item.onclick = () => {
@@ -1694,10 +1894,35 @@ function irAMovimientoPorCodigo(comboId, dificultad, variantIndex) {
     registrarHistorialFiltros();
 }
 
+// El panel del buscador de Movimiento (🔍, L) es "position: fixed" y se
+// ancla por su lado derecho al lado derecho del botón, exactamente igual que
+// el panel de "Seleccionar lista de favoritos" (ver posicionarFavListPanel,
+// más abajo en este archivo): así el panel siempre entra completo en la
+// pantalla y se abre hacia la izquierda, sin importar dónde esté el botón en
+// la fila (antes, con "left: 0" fijo en el CSS, se salía por el borde
+// derecho cuando el botón quedaba cerca de ese borde).
+function posicionarMovsearchPanel() {
+    const panel = document.getElementById('movsearch-options-panel');
+    const btn = document.getElementById('movsearch-btn');
+    if (!panel || !btn) return;
+    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    const rect = btn.getBoundingClientRect();
+    const panelWidth = panel.getBoundingClientRect().width || panel.offsetWidth;
+    let right = vw - rect.right;
+    const maxRight = Math.max(0, vw - panelWidth);
+    if (right > maxRight) right = maxRight;
+    if (right < 0) right = 0;
+    panel.style.right = `${right}px`;
+    panel.style.top = `${rect.bottom + 6}px`;
+}
+
 document.getElementById('movsearch-btn').onclick = (e) => {
     e.stopPropagation();
     toggleDropdown('movsearch-options-panel', () => {
-        renderMovSearchList('');
+        // Mantiene lo que ya hubiera escrito de una apertura anterior (ver
+        // closeAllDropdowns), en vez de arrancar siempre vacío.
+        renderMovSearchList(document.getElementById('movsearch-search').value);
+        posicionarMovsearchPanel();
         document.getElementById('movsearch-search').focus();
     });
 };
@@ -2693,6 +2918,14 @@ function resetearTodosLosFiltros() {
     filterPosIni = null;
     filterPosFin = null;
 
+    // 🌈/F resetea TODOS los filtros de una: junto con eso, limpiar también
+    // lo que hubiera quedado escrito en los buscadores de Figura/Posición
+    // (que ahora persisten entre aperturas — ver closeAllDropdowns), para
+    // que arranquen limpios la próxima vez que se abran.
+    document.getElementById('fig-search').value = '';
+    document.getElementById('posini-search').value = '';
+    document.getElementById('posfin-search').value = '';
+
     recalcularComboActual();
     aplicarCambioVisual();
     registrarHistorialFiltros();
@@ -2718,9 +2951,20 @@ function snapshotFiltrosActual() {
     return { filterFigura, filterPosIni, filterPosFin, filterDificultad };
 }
 
+// Compara dos valores de UNA dimensión de filtro (Figura, Posición Inicial o
+// Posición Final), tratando dos filtros de texto libre como "el mismo" si
+// tienen el mismo texto normalizado (si no, cada Enter con el mismo texto
+// generaría una entrada de historial nueva, por ser objetos distintos).
+function valoresFiltroIguales(a, b) {
+    const aEsTexto = esFiltroTexto(a);
+    const bEsTexto = esFiltroTexto(b);
+    if (aEsTexto || bEsTexto) return aEsTexto && bEsTexto && a.texto === b.texto;
+    return a === b;
+}
+
 function mismosFiltros(a, b) {
-    return a.filterFigura === b.filterFigura && a.filterPosIni === b.filterPosIni &&
-        a.filterPosFin === b.filterPosFin && a.filterDificultad === b.filterDificultad;
+    return valoresFiltroIguales(a.filterFigura, b.filterFigura) && valoresFiltroIguales(a.filterPosIni, b.filterPosIni) &&
+        valoresFiltroIguales(a.filterPosFin, b.filterPosFin) && a.filterDificultad === b.filterDificultad;
 }
 
 // Se llama justo después de cada cambio real de filtro. Si el resultado
@@ -3085,6 +3329,7 @@ function aplicarCambioVisual() {
     actualizarEstadoBotonHide();
     actualizarEstadoBotonNota();
     actualizarEstadoBotonFavSaveFiltered();
+    actualizarEstadoBotonPosIgual();
 }
 
 prevPageBtn.onclick = () => moverCombo(-1);
@@ -3540,6 +3785,34 @@ async function borrarCacheYActualizar(conservarFavoritos) {
     }
 }
 
+// "🗑️ Borrar mis favoritos, ocultos y notas": a diferencia de "🧹 Borrar
+// caché", esto NO toca el Service Worker ni lo descargado para modo avión —
+// sólo vacía las 3 cosas que vive fuera del caché (listas de favoritos,
+// Figuras ocultas y notas), sin recargar la página. Pide confirmación
+// porque es irreversible (no hay backup automático; para eso está
+// "⬆️ Exportar" antes de hacer esto, si se quiere conservar una copia).
+document.getElementById('menu-clear-favs-item').onclick = () => {
+    closeAllDropdowns();
+    const confirmado = confirm('Esto borra tus listas de favoritos, tus Figuras ocultas y tus notas guardadas en este dispositivo. No afecta lo descargado para modo avión. Si querés conservar una copia, cancelá y usá "Exportar" antes. ¿Continuar?');
+    if (!confirmado) return;
+
+    guardarFavLists([]);
+    setFavActiveListId(null);
+    favExpandedListIds.clear();
+    guardarHiddenSteps([]);
+    guardarNotas([]);
+
+    actualizarEtiquetaFavLista();
+    actualizarEstadoBotonFavAdd();
+    actualizarEstadoBotonHide();
+    actualizarEstadoBotonNota();
+    actualizarEtiquetaFigurasOcultas();
+    actualizarNotaEnVideo('');
+    renderFavListDropdown();
+    aplicarCambioVisual();
+    actualizarPaginacion();
+};
+
 document.getElementById('menu-clear-cache-item').onclick = async () => {
     closeAllDropdowns();
     const confirmado = confirm('Esto borra todo lo guardado en este dispositivo (incluido lo descargado para modo avión, tus listas de favoritos, tus Figuras ocultas y tus notas) y recarga la última versión de la app. ¿Continuar?');
@@ -3708,7 +3981,8 @@ const HOTKEYS_INFO = [
     { keys: ['I'], desc: 'Activar/desactivar "=": mostrar sólo tomas con Posición Inicial y Final iguales' },
     { keys: ['O'], desc: 'Ocultar / Mostrar el movimiento actual' },
     { keys: ['N'], desc: 'Anotar / Editar la nota personal del movimiento actual' },
-    { keys: ['L'], desc: 'Buscar un Movimiento por su código de 3 letras' },
+    { keys: ['L'], desc: 'Buscar un Movimiento por código o por texto libre (Dificultad/Posición/Figura)' },
+    { keys: ['Enter'], desc: 'En Figura / Posición Inicial / Posición Final: escribir un texto y confirmar (sin elegir un ítem puntual) filtra por TODAS las que contengan ese texto (ej. "Doble Péndulo" agrupa Cruzado y Paralelo)' },
     { keys: ['+'], desc: 'Aumentar la velocidad' },
     { keys: ['-'], desc: 'Disminuir la velocidad' },
     { keys: ['A'], desc: 'Canción anterior' },
@@ -3840,7 +4114,24 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         if (key === 'arrowup') navigateDropdownHighlight(openDropdown.listId, -1);
         else if (key === 'arrowdown') navigateDropdownHighlight(openDropdown.listId, 1);
-        else if (key === 'enter') confirmDropdownHighlight(openDropdown.listId);
+        else if (key === 'enter') {
+            // En Figura / Posición Inicial / Posición Final: si no hay nada
+            // resaltado con las flechas (o sea, el usuario sólo tipeó texto y
+            // apretó Enter directo), ese texto se aplica como filtro de
+            // "texto libre" (ver aplicarFiltroTextoLibre), agrupando de una
+            // sola vez todos los valores que lo contengan. Si SÍ hay algo
+            // resaltado (se navegó con flechas hasta un ítem puntual), Enter
+            // sigue confirmando ESE ítem exacto, como siempre.
+            const dimensionTextoLibre = PANEL_A_DIMENSION_TEXTO_LIBRE[openDropdown.panelId];
+            const listaAbierta = document.getElementById(openDropdown.listId);
+            const hayResaltado = listaAbierta && listaAbierta.querySelector('.dropdown-item.kbd-highlight');
+            let aplicado = false;
+            if (!hayResaltado && dimensionTextoLibre) {
+                const inputEl = document.getElementById(DIMENSION_A_SEARCH_INPUT[dimensionTextoLibre]);
+                aplicado = aplicarFiltroTextoLibre(dimensionTextoLibre, inputEl ? inputEl.value : '');
+            }
+            if (!aplicado) confirmDropdownHighlight(openDropdown.listId);
+        }
         else if (key === 'escape') closeAllDropdowns();
         return;
     }
@@ -3979,6 +4270,7 @@ document.getElementById('menu-show-hidden-toggle-item').classList.toggle('active
 document.getElementById('fig-individualizar-btn').classList.toggle('active', mostrarFigurasIndividuales);
 document.getElementById('fig-combos-btn').classList.toggle('active', mostrarCombos);
 document.getElementById('pos-igual-btn').classList.toggle('active', filtroPosIgual);
+actualizarEstadoBotonPosIgual();
 actualizarEtiquetaFavLista();
 
 const savedSort = getCookie('songSort');
