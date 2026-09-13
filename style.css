@@ -617,7 +617,7 @@ body, html {
 #fav-list-dropdown-container {min-width: 0;width: 85px;max-width: 85px;flex: 0 0 53px;}
 /* Con al menos una lista creada, el botón muestra nombre + cantidad (más
    texto que el "..." por defecto), así que se le da más ancho. */
-#fav-list-dropdown-container.has-lists {flex: 0 0 70px;}
+#fav-list-dropdown-container.has-lists {flex: 0 0 71px;}
 #fav-list-dropdown-container .dropdown-selected {
     height: 35px;
     background-color: #da820d;
